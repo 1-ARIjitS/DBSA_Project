@@ -37,7 +37,7 @@ Project for the Database Systems Architecture course at ULB.
        8 /__////__////__////__////    Simon Coessens
       7 ////__////__////__////__/        Ben Gold
      6 /__////__////__////__////             Niels Van Es Ostos
-    5 ////__////__////__////__/                   Arijit 
+    5 ////__////__////__////__/                   Arijit Samal
    4 /__////__////__////__////   
   3 ////__////__////__////__/    
  2 /__////__////__////__////   
