@@ -53,3 +53,13 @@ Requirements:
 Chessboard: FEN
 Chessgame: SAN
 
+
+# Task division 
+
+6 november: 
+   - Arijit & Niels: Implement Data type in C
+   - Simon: ```getBoard(chessgame, integer) -> chessboard:```, ```getFirstMoves(chessgame, integer) -> chessgame:```
+   - Ben: ```hasOpening(chessgame, chessgame) -> bool:```, ```hasBoard(chessgame, chessboard, integer) -> bool:```
+
+Next meeting: 13 November 16:00 💯
+
