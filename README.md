@@ -46,13 +46,10 @@ Project for the Database Systems Architecture course at ULB.
 
 ```
 
-
+Requirements: 
 
 #1. Deciding the Datastructures for the new Data types
 
 Chessboard: FEN
 Chessgame: SAN
 
-
-Requirements: 
-   - 
