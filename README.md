@@ -1,5 +1,10 @@
 # DBSA_Project
-Project for the Database Systems Architecture course at ULB
+Project for the Database Systems Architecture course at ULB.
+
+
+# Meetings
+
+1. Mon 6 nov. 16:00
 
 # Steps:
 1. Implementing the two data types: chessgame, chessboard
@@ -29,10 +34,10 @@ Project for the Database Systems Architecture course at ULB
    (______)(_______)(_______)(________)(________)(_________)
 
           __    __    __    __         
-       8 /__////__////__////__////    
-      7 ////__////__////__////__/    
-     6 /__////__////__////__////    
-    5 ////__////__////__////__/    
+       8 /__////__////__////__////    Simon Coessens
+      7 ////__////__////__////__/        Ben Gold
+     6 /__////__////__////__////             Niels Van Es Ostos
+    5 ////__////__////__////__/                   Arijit 
    4 /__////__////__////__////   
   3 ////__////__////__////__/    
  2 /__////__////__////__////   
