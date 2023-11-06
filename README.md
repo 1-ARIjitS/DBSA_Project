@@ -1,6 +1,15 @@
 # DBSA_Project
 Project for the Database Systems Architecture course at ULB
 
+# Steps:
+1. Implementing the two data types: chessgame, chessboard
+2. Implementing the functions and predicates
+   - ```getBoard(game, move):``` Get board state at a specific move.
+   - ```getFirstMoves(game, n):``` Get the opening moves.
+   - ```hasOpening(game, opening):``` Check if game starts with the same opening.
+   - ```hasBoard(game, board, n):``` Check if board state is in initial moves.
+3. Implementing the two indexes
+
 ```
                                                      _:_
                                                     '-.-'
