@@ -11,7 +11,7 @@ class chessboard:
 def getBoard(chessgame, half_move_count):
     converter = pgntofen.PgnToFen()
 
-    for move in chessgame.san.split(' '):
+    for move in chessgame.san.split(' ')[:half_move_count]:
         converter.move(move)
 
     # Convert to FEN and return
