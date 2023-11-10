@@ -65,6 +65,7 @@ Algorithms needed:
    - SAN to FEN: paper in the readings folder gives an alg. to update FEN notation
         - For ```getBoard(chessgame, integer)```we need an algorithm that converts SAN to FEN directly
         - For ```hasBoard(chessgame, chessboard, integer)```we need an algorithm that updates FEN after each move (paper gives an alg. for that)
+        - another interesting link: https://github.com/SindreSvendby/pgnToFen
 
 Next meeting: 13 November 16:00 💯
 
