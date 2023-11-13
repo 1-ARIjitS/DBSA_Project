@@ -1,4 +1,5 @@
 import pgntofen
+from fentoboardimage import fenToImage, loadPiecesFolder
 
 class chessgame:
     def __init__(self,san):
@@ -38,10 +39,15 @@ def has_board(chessgame1, chessboard1, half_move_count):
 if __name__ == "__main__":
     san = 'c4 Nc6 Nc3 e5 Nf3 Nf6 g3 d5 cxd5 Nxd5 Bg2 Nb6 O-O Be7 a3 Be6 b4 a5 b5 Nd4 Nxd4 exd4 Na4 Bd5 Nxb6 cxb6 Bxd5'
     chessgame_1 = chessgame(san)
-    print(getBoard(chessgame_1,10))
+    print(getBoard(chessgame_1,3))
     print(get_first_moves(chessgame_1,5))
     fen = 'r2qk2r/1p2bppp/1p6/pP1B4/3p4/P5P1/3PPP1P/R1BQ1RK1 b - kq'
     print(has_board(chessgame_1,chessboard(fen),100))
 
-
-
+    boardImage = fenToImage(
+        fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        squarelength=100,
+        pieceSet=loadPiecesFolder("./pieces"),
+        darkColor="#D18B47",
+        lightColor="#FFCE9E"
+    )
