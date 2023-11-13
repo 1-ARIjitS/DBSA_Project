@@ -69,3 +69,11 @@ Algorithms needed:
 
 Next meeting: 13 November 16:00 💯
 
+
+
+TODO: 
+   1. Dummy project for just the datatypes, without indexes and stuff 
+   2. Interpret the smallchess lib file (write our own SAN -> FEN function)
+Everyone works on these things
+
+# NEXT MEETING: 21 November 
