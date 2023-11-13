@@ -67,7 +67,7 @@ Algorithms needed:
         - For ```hasBoard(chessgame, chessboard, integer)```we need an algorithm that updates FEN after each move (paper gives an alg. for that)
         - another interesting link: https://github.com/SindreSvendby/pgnToFen
 
-Next meeting: 13 November 16:00 💯
+# Next meeting: 13 November 16:00 💯
 
 
 
