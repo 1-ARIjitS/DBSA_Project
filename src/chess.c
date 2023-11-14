@@ -36,13 +36,13 @@ PG_MODULE_MAGIC;
 /* Structure to represent the chessgame */
 typedef struct chessgame
 {
-    text *san; // text is a built in PostgreSQL type
+    char san[100]; // text is a built in PostgreSQL type
 } chessgame;
 
 /* Structure to represent the chessboard */
 typedef struct chessboard
 {
-    text *fen; 
+    char fen[80]; 
 } chessboard;
 
 
@@ -52,22 +52,29 @@ typedef struct chessboard
 static chessgame *
 chessgame_make(const char *san)
 {
+    int i;
     chessgame *game = palloc0(sizeof(chessgame));
-    game->san = cstring_to_text(san);                  // convert to PostgreSQL text
+    for(i=0;i<100;i++){
+        game->san[i] = san[i];
+    }                 
     return game;
 }
 
 static chessboard *
 chessboard_make(const char *fen)
 {
+    int i;
     chessboard *board = palloc0(sizeof(chessboard));
-    board->fen = cstring_to_text(fen);
+    for(i=0;i<100;i++){
+        board->fen[i] = fen[i];
+    }                 
     return board;
 }
 
 /*****************************************************************************/
 // 3. parse functions
 
+// This function needs to check for illegal args. 
 static chessgame *
 chessgame_parse(char **str)
 {
@@ -84,13 +91,13 @@ chessboard_parse(char **str)
 static char *
 chessgame_to_str(const chessgame *game)
 {
-    return text_to_cstring(game->san);
+    return game->san;
 }
 
 static char *
 chessboard_to_str(const chessboard *board)
 {
-    return text_to_cstring(board->fen);
+    return board->fen;
 }
 
 
@@ -141,9 +148,8 @@ chessgame_recv(PG_FUNCTION_ARGS)
 {
     StringInfo buf = (StringInfo) PG_GETARG_POINTER(0);
     // Read the text string from the buffer
-    text *san= cstring_to_text(pq_getmsgstring(buf));
     chessgame *game = palloc(sizeof(chessgame));
-    game->san = san;
+    game->san = pq_getmsgstring(buf);
     PG_RETURN_POINTER(game);
 }
 
@@ -153,9 +159,8 @@ chessboard_recv(PG_FUNCTION_ARGS)
 {
     StringInfo buf = (StringInfo) PG_GETARG_POINTER(0);
     // Read the text string from the buffer
-    text *fen = cstring_to_text(pq_getmsgstring(buf));
     chessboard *board = palloc(sizeof(chessboard));
-    board->fen = fen;
+    board->fen = pq_getmsgstring(buf);
     PG_RETURN_POINTER(board);
 }
 
@@ -197,7 +202,7 @@ Datum
 chessgame_cast_to_text(PG_FUNCTION_ARGS)
 {
     chessgame *game = (chessgame *) PG_GETARG_POINTER(0);
-    text *out = cstring_to_text(chessgame_to_str(game));
+    char *out = chessgame_to_str(game);
     PG_FREE_IF_COPY(game, 0);
     PG_RETURN_TEXT_P(out);
 }
@@ -217,7 +222,7 @@ Datum
 chessboard_cast_to_text(PG_FUNCTION_ARGS)
 {
     chessboard *board = (chessboard *) PG_GETARG_POINTER(0);
-    text *out = cstring_to_text(chessboard_to_str(board));
+    char *out = chessboard_to_str(board);
     PG_FREE_IF_COPY(board, 0);
     PG_RETURN_TEXT_P(out);
 }
@@ -254,7 +259,7 @@ chessboard_constructor(PG_FUNCTION_ARGS)
 static bool
 chessgame_eq_internal(chessgame *g1, chessgame *g2)
 {
-    return strcmp(text_to_cstring(g1->san), text_to_cstring(g2->san)) == 0;
+    return strcmp(g1->san, g2->san) == 0;
 }
 
 PG_FUNCTION_INFO_V1(chessgame_eq);

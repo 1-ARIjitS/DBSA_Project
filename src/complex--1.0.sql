@@ -1,48 +1,80 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
-\echo Use "CREATE EXTENSION complex" to load this file. \quit
+\echo Use "CREATE EXTENSION chess" to load this file. \quit
 
 /******************************************************************************
  * Input/Output
  ******************************************************************************/
 
-CREATE OR REPLACE FUNCTION complex_in(cstring)
-  RETURNS complex
+CREATE OR REPLACE FUNCTION chess_in(cstring)
+  RETURNS chess
   AS 'MODULE_PATHNAME'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION complex_out(complex)
+CREATE OR REPLACE FUNCTION chessgame_out(chessgame)
   RETURNS cstring
   AS 'MODULE_PATHNAME'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+  
+CREATE OR REPLACE FUNCTION chessboard_in(cstring)
+  RETURNS chessboard
+  AS 'MODULE_PATHNAME'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+  
+  CREATE OR REPLACE FUNCTION chessboard_out(chessboard)
+  RETURNS cstring
+  AS 'MODULE_PATHNAME'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+  
 
-CREATE OR REPLACE FUNCTION complex_recv(internal)
-  RETURNS complex
+CREATE OR REPLACE FUNCTION chessgame_recv(internal)
+  RETURNS chessgame
   AS 'MODULE_PATHNAME'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION complex_send(complex)
+CREATE OR REPLACE FUNCTION chessgame_send(complex)
+  RETURNS bytea
+  AS 'MODULE_PATHNAME'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+  
+  CREATE OR REPLACE FUNCTION chessboard_recv(internal)
+  RETURNS chessboard
+  AS 'MODULE_PATHNAME'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION chessboard_send(complex)
   RETURNS bytea
   AS 'MODULE_PATHNAME'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 CREATE TYPE complex (
-  internallength = 16,
+  //internallength = 16,
   input          = complex_in,
   output         = complex_out,
   receive        = complex_recv,
   send           = complex_send,
-  alignment      = double
+  alignment      = char
 );
 
-CREATE OR REPLACE FUNCTION complex(text)
-  RETURNS complex
-  AS 'MODULE_PATHNAME', 'complex_cast_from_text'
+CREATE OR REPLACE FUNCTION chessgame(text)
+  RETURNS chessgame
+  AS 'MODULE_PATHNAME', 'chessgame_cast_from_text'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE OR REPLACE FUNCTION text(complex)
+CREATE OR REPLACE FUNCTION text(chessgame)
   RETURNS text
-  AS 'MODULE_PATHNAME', 'complex_cast_to_text'
+  AS 'MODULE_PATHNAME', 'chessgame_cast_to_text'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+  
+  CREATE OR REPLACE FUNCTION chessboard(text)
+  RETURNS chessboard
+  AS 'MODULE_PATHNAME', 'chessboard_cast_from_text'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OR REPLACE FUNCTION text(chessboard)
+  RETURNS text
+  AS 'MODULE_PATHNAME', 'chessboard_cast_to_text'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+  
 
 CREATE CAST (text as complex) WITH FUNCTION complex(text) AS IMPLICIT;
 CREATE CAST (complex as text) WITH FUNCTION text(complex);
