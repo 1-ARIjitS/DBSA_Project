@@ -88,17 +88,17 @@ chessboard_parse(char **str)
 }
 
 
-static char *
-chessgame_to_str(const chessgame *game)
-{
-    return game->san;
-}
+//static char *
+//chessgame_to_str(const chessgame *game)
+//{
+//    return game->san;
+//}
 
-static char *
-chessboard_to_str(const chessboard *board)
-{
-    return board->fen;
-}
+//static char *
+//chessboard_to_str(const chessboard *board)
+//{
+//    return board->fen;
+//}
 
 
 /*****************************************************************************/
