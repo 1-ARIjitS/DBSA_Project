@@ -19,15 +19,15 @@ PG_MODULE_MAGIC;
  * local_offset only needs to be 1 byte because domain names are
  * restricted to 255 bytes in length (RFC 1034, RFC 1035, RFC 1123).
  */
-typedef struct emailadr {
+typedef struct chessgame {
 	char	vl_len_[4];
 	uint8	local_offset;
-	char	data[FLEXIBLE_ARRAY_MEMBER];
-} emailaddr;
+	char	data[FLEXIBLE_ARRAY_MEMBER]; //array with unspecified size
+} chessgame;
 
 
-#define DatumGetEmailAddrP(X)   ((emailaddr *) PG_DETOAST_DATUM(X))
-#define DatumGetEmailAddrPP(X)  ((emailaddr *) PG_DETOAST_DATUM_PACKED(X))
+#define DatumGetEmailAddrP(X)   ((chessgame *) PG_DETOAST_DATUM(X))
+#define DatumGetEmailAddrPP(X)  ((chessgame *) PG_DETOAST_DATUM_PACKED(X))
 #define EmailAddrPGetDatum(X)   PointerGetDatum(X)
 
 #define PG_GETARG_EMAILADDR_P(n)  DatumGetEmailAddrP(PG_GETARG_DATUM(n))
@@ -35,82 +35,30 @@ typedef struct emailadr {
 #define PG_RETURN_EMAILADDR_P(x)  PG_RETURN_POINTER(x)
 
 
-static bool
-is_atext(char c)
-{
-	return ((c >= 'a' && c <= 'z')
-			|| (c >= 'A' && c <= 'Z')
-			|| (c >= '0' && c <= '9')
-			|| c == '!' || c == '#'
-			|| c == '$' || c == '%'
-			|| c == '&' || c == '\''
-			|| c == '*' || c == '+'
-			|| c == '-' || c == '/'
-			|| c == '=' || c == '?'
-			|| c == '^' || c == '_'
-			|| c == '`' || c == '{'
-			|| c == '|' || c == '}'
-			|| c == '~'
-		);
-}
 
-static void
-parse_dot_atom(const char *s, size_t len)
-{
-	size_t i;
+/*****************************************************************************/
+// 4. _in, _out, _recv, _send, _cast_from_text, _cast_to_text
 
-	for (i = 0; i < len; i++)
-		if (!is_atext(s[i]) && s[i] != '.')
-			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for type emailaddr: invalid character \"%c\"", s[i])));
-}
 
-static void
-parse_domain_literal(const char *s, size_t len)
-{
-	size_t i;
-
-	for (i = 1; i < len - 1; i++)
-		switch (s[i])
-		{
-			case '[':
-			case ']':
-			case '\\':
-			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for type emailaddr: invalid character \"%c\"", s[i])));
-		}
-
-	if (s[len - 1] != ']')
-		ereport(ERROR,
-			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-			 errmsg("invalid input syntax for type emailaddr: missing matching \"]\"")));
-}
-
-PG_FUNCTION_INFO_V1(emailaddr_in);
+PG_FUNCTION_INFO_V1(chessgame_in);
 Datum
-emailaddr_in(PG_FUNCTION_ARGS)
+chessgame_in(PG_FUNCTION_ARGS)
 {
 	char *s = PG_GETARG_CSTRING(0);
-	emailaddr *result;
+	chessgame *result;
 	char *p;
 	size_t len;
 	int32 result_len;
 	size_t domain_len;
 
 	p = strchr(s, '@');
-	if (!p)
-		ereport(ERROR,
-			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-			 errmsg("invalid input syntax for type emailaddr: missing \"@\"")));
 
 	len =  strlen(s);
 	domain_len = len - (p - s) - 1;
 	if (domain_len > 255)
 		ereport(ERROR,
 			(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-			 errmsg("invalid input syntax for type emailaddr: domain too long")));
+			 errmsg("invalid input syntax for type chessgame: domain too long")));
 
 	parse_dot_atom(s, (p - s));
 	if (*(p + 1) == '[')
@@ -118,7 +66,7 @@ emailaddr_in(PG_FUNCTION_ARGS)
 	else
 		parse_dot_atom(p + 1, domain_len);
 
-	result_len = offsetof(emailaddr, data) + len - 1;
+	result_len = offsetof(chessgame, data) + len - 1;
 	result = palloc(result_len);
 	SET_VARSIZE(result, result_len);
 	result->local_offset = domain_len;
@@ -128,18 +76,18 @@ emailaddr_in(PG_FUNCTION_ARGS)
 	PG_RETURN_EMAILADDR_P(result);
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_out);
+PG_FUNCTION_INFO_V1(chessgame_out);
 Datum
-emailaddr_out(PG_FUNCTION_ARGS)
+chessgame_out(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg = PG_GETARG_EMAILADDR_P(0);
+	chessgame *arg = PG_GETARG_EMAILADDR_P(0);
 	char *result;
 	size_t result_len;
 	size_t local_len;
 
-	result_len = VARSIZE(arg) - offsetof(emailaddr, data) + 1 + 1;
+	result_len = VARSIZE(arg) - offsetof(chessgame, data) + 1 + 1;
 	result = palloc(result_len);
-	local_len = VARSIZE(arg) - offsetof(emailaddr, data) - arg->local_offset;
+	local_len = VARSIZE(arg) - offsetof(chessgame, data) - arg->local_offset;
 	memcpy(result, arg->data + arg->local_offset, local_len);
 	result[local_len] = '@';
 	memcpy(result + local_len + 1, arg->data, arg->local_offset);
@@ -162,7 +110,7 @@ strnncmp(const char *s1, size_t n1, const char *s2, size_t n2)
 }
 
 static int
-_emailaddr_cmp(emailaddr *a, emailaddr *b)
+_chessgame_cmp(chessgame *a, chessgame *b)
 {
 	int res;
 
@@ -170,78 +118,78 @@ _emailaddr_cmp(emailaddr *a, emailaddr *b)
 	if (res != 0)
 		return res;
 
-	res = strnncmp(a->data + a->local_offset, VARSIZE(a) - offsetof(emailaddr, data) - a->local_offset,
-				   b->data + b->local_offset, VARSIZE(b) - offsetof(emailaddr, data) - b->local_offset);
+	res = strnncmp(a->data + a->local_offset, VARSIZE(a) - offsetof(chessgame, data) - a->local_offset,
+				   b->data + b->local_offset, VARSIZE(b) - offsetof(chessgame, data) - b->local_offset);
 
 	return res;
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_lt);
+PG_FUNCTION_INFO_V1(chessgame_lt);
 Datum
-emailaddr_lt(PG_FUNCTION_ARGS)
+chessgame_lt(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg1 = PG_GETARG_EMAILADDR_PP(0);
-	emailaddr *arg2 = PG_GETARG_EMAILADDR_PP(1);
+	chessgame *arg1 = PG_GETARG_EMAILADDR_PP(0);
+	chessgame *arg2 = PG_GETARG_EMAILADDR_PP(1);
 
-	PG_RETURN_BOOL(_emailaddr_cmp(arg1, arg2) < 0);
+	PG_RETURN_BOOL(_chessgame_cmp(arg1, arg2) < 0);
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_le);
+PG_FUNCTION_INFO_V1(chessgame_le);
 Datum
-emailaddr_le(PG_FUNCTION_ARGS)
+chessgame_le(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg1 = PG_GETARG_EMAILADDR_PP(0);
-	emailaddr *arg2 = PG_GETARG_EMAILADDR_PP(1);
+	chessgame *arg1 = PG_GETARG_EMAILADDR_PP(0);
+	chessgame *arg2 = PG_GETARG_EMAILADDR_PP(1);
 
-	PG_RETURN_BOOL(_emailaddr_cmp(arg1, arg2) <= 0);
+	PG_RETURN_BOOL(_chessgame_cmp(arg1, arg2) <= 0);
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_eq);
+PG_FUNCTION_INFO_V1(chessgame_eq);
 Datum
-emailaddr_eq(PG_FUNCTION_ARGS)
+chessgame_eq(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg1 = PG_GETARG_EMAILADDR_PP(0);
-	emailaddr *arg2 = PG_GETARG_EMAILADDR_PP(1);
+	chessgame *arg1 = PG_GETARG_EMAILADDR_PP(0);
+	chessgame *arg2 = PG_GETARG_EMAILADDR_PP(1);
 
-	PG_RETURN_BOOL(_emailaddr_cmp(arg1, arg2) == 0);
+	PG_RETURN_BOOL(_chessgame_cmp(arg1, arg2) == 0);
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_ne);
+PG_FUNCTION_INFO_V1(chessgame_ne);
 Datum
-emailaddr_ne(PG_FUNCTION_ARGS)
+chessgame_ne(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg1 = PG_GETARG_EMAILADDR_PP(0);
-	emailaddr *arg2 = PG_GETARG_EMAILADDR_PP(1);
+	chessgame *arg1 = PG_GETARG_EMAILADDR_PP(0);
+	chessgame *arg2 = PG_GETARG_EMAILADDR_PP(1);
 
-	PG_RETURN_BOOL(_emailaddr_cmp(arg1, arg2) != 0);
+	PG_RETURN_BOOL(_chessgame_cmp(arg1, arg2) != 0);
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_ge);
+PG_FUNCTION_INFO_V1(chessgame_ge);
 Datum
-emailaddr_ge(PG_FUNCTION_ARGS)
+chessgame_ge(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg1 = PG_GETARG_EMAILADDR_PP(0);
-	emailaddr *arg2 = PG_GETARG_EMAILADDR_PP(1);
+	chessgame *arg1 = PG_GETARG_EMAILADDR_PP(0);
+	chessgame *arg2 = PG_GETARG_EMAILADDR_PP(1);
 
-	PG_RETURN_BOOL(_emailaddr_cmp(arg1, arg2) >= 0);
+	PG_RETURN_BOOL(_chessgame_cmp(arg1, arg2) >= 0);
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_gt);
+PG_FUNCTION_INFO_V1(chessgame_gt);
 Datum
-emailaddr_gt(PG_FUNCTION_ARGS)
+chessgame_gt(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg1 = PG_GETARG_EMAILADDR_PP(0);
-	emailaddr *arg2 = PG_GETARG_EMAILADDR_PP(1);
+	chessgame *arg1 = PG_GETARG_EMAILADDR_PP(0);
+	chessgame *arg2 = PG_GETARG_EMAILADDR_PP(1);
 
-	PG_RETURN_BOOL(_emailaddr_cmp(arg1, arg2) > 0);
+	PG_RETURN_BOOL(_chessgame_cmp(arg1, arg2) > 0);
 }
 
-PG_FUNCTION_INFO_V1(emailaddr_cmp);
+PG_FUNCTION_INFO_V1(chessgame_cmp);
 Datum
-emailaddr_cmp(PG_FUNCTION_ARGS)
+chessgame_cmp(PG_FUNCTION_ARGS)
 {
-	emailaddr *arg1 = PG_GETARG_EMAILADDR_PP(0);
-	emailaddr *arg2 = PG_GETARG_EMAILADDR_PP(1);
+	chessgame *arg1 = PG_GETARG_EMAILADDR_PP(0);
+	chessgame *arg2 = PG_GETARG_EMAILADDR_PP(1);
 
-	PG_RETURN_INT32(_emailaddr_cmp(arg1, arg2));
+	PG_RETURN_INT32(_chessgame_cmp(arg1, arg2));
 }

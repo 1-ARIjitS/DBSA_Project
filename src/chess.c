@@ -142,90 +142,31 @@ chessboard_out(PG_FUNCTION_ARGS)
 }
 
 
-PG_FUNCTION_INFO_V1(chessgame_recv);
-Datum
-chessgame_recv(PG_FUNCTION_ARGS)
-{
-    StringInfo buf = (StringInfo) PG_GETARG_POINTER(0);
+//PG_FUNCTION_INFO_V1(chessgame_recv);
+//Datum
+//chessgame_recv(PG_FUNCTION_ARGS)
+//{
+    //StringInfo buf = (StringInfo) PG_GETARG_POINTER(0);
     // Read the text string from the buffer
-    chessgame *game = palloc(sizeof(chessgame));
-    game->san = pq_getmsgstring(buf);
-    PG_RETURN_POINTER(game);
-}
-
-PG_FUNCTION_INFO_V1(chessboard_recv);
-Datum
-chessboard_recv(PG_FUNCTION_ARGS)
-{
-    StringInfo buf = (StringInfo) PG_GETARG_POINTER(0);
-    // Read the text string from the buffer
-    chessboard *board = palloc(sizeof(chessboard));
-    board->fen = pq_getmsgstring(buf);
-    PG_RETURN_POINTER(board);
-}
-
-PG_FUNCTION_INFO_V1(chessgame_send);
-Datum
-chessgame_send(PG_FUNCTION_ARGS)
-{
-    chessgame *game = (chessgame *) PG_GETARG_POINTER(0);
-    StringInfoData buf;
-    pq_begintypsend(&buf);
-    pq_sendtext(&buf, game->san);
-    PG_FREE_IF_COPY(game, 0);
-    PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
-}
-
-PG_FUNCTION_INFO_V1(chessboard_send);
-Datum
-chessboard_send(PG_FUNCTION_ARGS)
-{
-    chessboard *board = (chessboard *) PG_GETARG_POINTER(0);
-    StringInfoData buf;
-    pq_begintypsend(&buf);
-    pq_sendtext(&buf, board->fen);
-    PG_FREE_IF_COPY(board, 0);
-    PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
-}
-
-PG_FUNCTION_INFO_V1(chessgame_cast_from_text);
-Datum
-chessgame_cast_from_text(PG_FUNCTION_ARGS)
-{
-    text *txt = PG_GETARG_TEXT_P(0);
-    char *str = DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(txt)));
-    PG_RETURN_POINTER(chessgame_parse(&str));
-}
-
-PG_FUNCTION_INFO_V1(chessgame_cast_to_text);
-Datum
-chessgame_cast_to_text(PG_FUNCTION_ARGS)
-{
-    chessgame *game = (chessgame *) PG_GETARG_POINTER(0);
-    char *out = chessgame_to_str(game);
-    PG_FREE_IF_COPY(game, 0);
-    PG_RETURN_TEXT_P(out);
-}
-
-PG_FUNCTION_INFO_V1(chessboard_cast_from_text);
-Datum
-chessboard_cast_from_text(PG_FUNCTION_ARGS)
-{
-    text *txt = PG_GETARG_TEXT_P(0);
-    char *str = DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(txt)));
-    PG_RETURN_POINTER(chessboard_parse(&str));
-}
+    //chessgame *game = palloc(sizeof(chessgame));
+    //game->san = pq_getmsgstring(buf);
+    //PG_RETURN_POINTER(game);
+//}
 
 
-PG_FUNCTION_INFO_V1(chessboard_cast_to_text);
-Datum
-chessboard_cast_to_text(PG_FUNCTION_ARGS)
-{
-    chessboard *board = (chessboard *) PG_GETARG_POINTER(0);
-    char *out = chessboard_to_str(board);
-    PG_FREE_IF_COPY(board, 0);
-    PG_RETURN_TEXT_P(out);
-}
+
+//PG_FUNCTION_INFO_V1(chessgame_send);
+//Datum
+//chessgame_send(PG_FUNCTION_ARGS)
+//{
+    //chessgame *game = (chessgame *) PG_GETARG_POINTER(0);
+    //StringInfoData buf;
+    //pq_begintypsend(&buf);
+    //pq_sendtext(&buf, game->san);
+    //PG_FREE_IF_COPY(game, 0);
+    //PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
+//}
+
 
 /*****************************************************************************/
 // 5.  Constructor functions
