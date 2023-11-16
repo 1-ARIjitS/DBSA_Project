@@ -77,3 +77,47 @@ TODO:
 Everyone works on these things
 
 # NEXT MEETING: 21 November 
+
+
+DATAtype working and testedn: 
+
+```
+postgres=# -- Create a test table for chess games
+CREATE TABLE test_chessgames (
+    id serial PRIMARY KEY,
+    game chessgame
+);
+
+-- Insert sample data into the test table
+-- Note: Replace 'sample_game_data' with actual data in the correct format for a chessgame
+INSERT INTO test_chessgames (game) VALUES ('sample_game_data');
+
+-- Retrieve all records to verify insertion
+SELECT * FROM test_chessgames;
+
+-- Test custom functions (if any)
+-- Note: Replace 'function_name' and 'arguments' with your actual function names and appropriate arguments
+DROP TABLE test_chessgames;r testing = 1;1;game_data' WHERE id = 1; chessgame
+ERROR:  relation "test_chessgames" already exists
+INSERT 0 1
+ id |       game       
+----+------------------
+  1 | test
+  2 | sample_game_data
+(2 rows)
+
+UPDATE 1
+ id |       game        
+----+-------------------
+  1 | updated_game_data
+(1 row)
+
+DELETE 1
+ id |       game       
+----+------------------
+  2 | sample_game_data
+(1 row)
+
+DROP TABLE
+postgres=#
+```
