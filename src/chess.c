@@ -36,7 +36,7 @@ PG_MODULE_MAGIC;
 /* Structure to represent the chessgame */
 typedef struct chessgame
 {
-    char san[100]; // text is a built in PostgreSQL type
+    char san[100]; 
 } chessgame;
 
 /* Structure to represent the chessboard */
@@ -87,22 +87,23 @@ chessboard_parse(char **str)
     return chessboard_make(*str);
 }
 
-
 static char *
 chessgame_to_str(const chessgame *game)
 {
-    return game->san;
+    char *result = psprintf("%s", game->san);
+    return result;
 }
 
 static char *
 chessboard_to_str(const chessboard *board)
 {
-    return board->fen;
+    char *result = psprintf("%s", board->fen);
+    return result;
 }
 
 
 /*****************************************************************************/
-// 4. _in, _out, _recv, _send, _cast_from_text, _cast_to_text
+// 4. _in, _out, _recv, _send, _cast_from_text, _cast_to_text (I removed send and recv)
 
 PG_FUNCTION_INFO_V1(chessgame_in);
 Datum
@@ -121,7 +122,6 @@ chessgame_out(PG_FUNCTION_ARGS)
     PG_FREE_IF_COPY(game, 0);
     PG_RETURN_CSTRING(result);
 }
-
 
 PG_FUNCTION_INFO_V1(chessboard_in);
 Datum
@@ -193,7 +193,6 @@ chessboard_constructor(PG_FUNCTION_ARGS)
 
 
 
-
 /*****************************************************************************/
 //7. Compare functions and operators
 
@@ -227,40 +226,69 @@ chessgame_ne(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(result);
 }
 
-
-
-
-PG_FUNCTION_INFO_V1(chessgame_left);
-Datum
-chessgame_left(PG_FUNCTION_ARGS)
+static bool
+chessboard_eq_internal(chessboard *b1, chessboard *b2)
 {
-  //
+    return strcmp(b1->fen, b2->fen) == 0;
 }
 
-PG_FUNCTION_INFO_V1(chessgame_right);
+PG_FUNCTION_INFO_V1(chessboard_eq);
 Datum
-chessgame_right(PG_FUNCTION_ARGS)
+chessboard_eq(PG_FUNCTION_ARGS)
 {
-    //
+    chessboard *b1 = (chessboard *) PG_GETARG_POINTER(0);
+    chessboard *b2 = (chessboard *) PG_GETARG_POINTER(1);
+    bool result = chessboard_eq_internal(b1, b2);
+    PG_FREE_IF_COPY(b1, 0);
+    PG_FREE_IF_COPY(b2, 1);
+    PG_RETURN_BOOL(result);
 }
 
-PG_FUNCTION_INFO_V1(chessgame_below);
+PG_FUNCTION_INFO_V1(chessboard_ne);
 Datum
-chessgame_below(PG_FUNCTION_ARGS)
+chessboard_ne(PG_FUNCTION_ARGS)
 {
-    //
+    chessboard *b1 = (chessboard *) PG_GETARG_POINTER(0);
+    chessboard *b2 = (chessboard *) PG_GETARG_POINTER(1);
+    bool result = !chessboard_eq_internal(b1, b2);
+    PG_FREE_IF_COPY(b1, 0);
+    PG_FREE_IF_COPY(b2, 1);
+    PG_RETURN_BOOL(result);
 }
+
+
+
+//PG_FUNCTION_INFO_V1(chessgame_left);
+//Datum
+//chessgame_left(PG_FUNCTION_ARGS)
+//{
+  
+//}
+
+//PG_FUNCTION_INFO_V1(chessgame_right);
+//Datum
+//chessgame_right(PG_FUNCTION_ARGS)
+//{
+//    
+//}
+
+//PG_FUNCTION_INFO_V1(chessgame_below);
+//Datum
+//chessgame_below(PG_FUNCTION_ARGS)
+//{
+    
+//}
 
 /* Write the code for the following function 
  * This is the function for the strictly above '|>>' operator
  */
  
-PG_FUNCTION_INFO_V1(chessgame_above);
-Datum
-chessgame_above(PG_FUNCTION_ARGS)
-{
+//PG_FUNCTION_INFO_V1(chessgame_above);
+//Datum
+//chessgame_above(PG_FUNCTION_ARGS)
+//{
     //
-}
+//}
 
 // same for chessboard here
 
