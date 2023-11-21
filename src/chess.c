@@ -37,14 +37,24 @@ PG_MODULE_MAGIC;
 /* Structure to represent the chessgame */
 typedef struct chessgame
 {
-    char san[100]; 
+    char san[1000]; 
 } chessgame;
 
 /* Structure to represent the chessboard */
 typedef struct chessboard
 {
-    char fen[80]; 
+    char fen[1000]; 
 } chessboard;
+
+#define DatumGetChessBoard(X)  ((chessboard *) DatumGetPointer(X))
+#define ChessBoardPGetDatum(X)  PointerGetDatum(X)
+#define PG_GETARG_ChessBoard(n) DatumGetChessBoard(PG_GETARG_DATUM(n))
+#define PG_RETURN_ChessBoard(x) return ChessBoardPGetDatum(x)
+
+#define DatumGetChessGame(X)  ((chessgame *) DatumGetPointer(X))
+#define ChessGamePGetDatum(X)  PointerGetDatum(X)
+#define PG_GETARG_ChessGame(n) DatumGetChessGame(PG_GETARG_DATUM(n))
+#define PG_RETURN_ChessGame(x) return ChessGamePGetDatum(x)
 
 
 /*****************************************************************************/
@@ -240,8 +250,10 @@ int strEquals(const char *s1, const char *s2)
   return 1;
 }
 
+
+
 // Function 1: getBoard -> chessboard: Get FEN notation of the board after the given number of moves 
-chessboard getBoard(chessgame cg, int moves)
+chessboard getBoard_internal(chessgame cg, int moves)
 {
   // Initializing record for storing the PGN (SAN) string
   int num_half_moves;
@@ -320,15 +332,39 @@ chessboard getBoard(chessgame cg, int moves)
   return cb;
 }
 
+PG_FUNCTION_INFO_V1(getBoard);
+Datum 
+getBoard(PG_FUNCTION_ARGS)
+{
+    chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
+    int moves = PG_GETARG_INT32(1);
+
+    // Use getBoard_internal to get the chessboard result
+    chessboard result = getBoard_internal(*cg, moves);
+    PG_FREE_IF_COPY(cg, 0);
+    PG_FREE_IF_COPY(moves, 1);
+
+    // Create a dynamically allocated copy of the result to return
+    chessboard *resultPtr = (chessboard *)palloc(sizeof(chessboard));
+    *resultPtr = result;
+
+    // Return the pointer to the dynamically allocated copy
+    PG_RETURN_ChessBoard(resultPtr);
+}
+
+
 // Function 2: getFirstMoves -> chessgame: Get the SAN moves truncated till the given number of half moves
-chessgame getFirstMoves(chessgame cg, int moves)
+PG_FUNCTION_INFO_V1(getFirstMoves);
+Datum getFirstMoves(PG_FUNCTION_ARGS)
 {
   chessgame cg_truncated;
 
   // Initializing record for storing the PGN (SAN) string
+  chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
+  int moves = PG_GETARG_INT32(1);
   SCL_Record r;
   SCL_recordInit(r);
-  SCL_recordFromPGN(r, cg.san);
+  SCL_recordFromPGN(r, cg->san);
 
   // calculating the total number of half moves
   int num_half_moves= SCL_recordLength(r);
@@ -348,7 +384,7 @@ chessgame getFirstMoves(chessgame cg, int moves)
   // splitting the string using strtok
   if(num_half_moves > moves)
   {
-    char *token= strtok(cg.san, " ");
+    char *token= strtok(cg->san, " ");
     int half_move_count=1;
     int token_counter=0;
     char san_string_truncated[SCL_RECORD_MAX_SIZE];
@@ -387,7 +423,15 @@ chessgame getFirstMoves(chessgame cg, int moves)
     printf("ERROR: the number of half moves provided is > the number of half moves in the original PGN notation");
   }
 
-  return cg_truncated; 
+  // Create a dynamically allocated copy of the result to return
+  chessgame *resultPtr = (chessgame *)palloc(sizeof(chessgame));
+  *resultPtr = cg_truncated;
+
+  PG_FREE_IF_COPY(cg, 0);
+  PG_FREE_IF_COPY(moves,1);
+
+  // Return the pointer to the dynamically allocated copy
+  PG_RETURN_ChessGame(resultPtr);
 }
 
 // Function 3: hasOpening -> bool: To check if the original and the given PGN have the same opening
@@ -446,7 +490,7 @@ bool hasBoard(chessgame cg, chessboard cb, int moves)
   chessboard cb_heuristic;
   for(int i=1; i<moves; i++)
   {
-    cb_heuristic= getBoard(cg, i);
+    cb_heuristic= getBoard_internal(cg, i);
     if(strEquals(cb_heuristic.fen, cb.fen))
     {
       return true;

@@ -199,9 +199,14 @@ CREATE OPERATOR ...
 
 /******************************************************************************/
 
+CREATE FUNCTION getBoard(chessgame, int)
+RETURNS chessboard
+AS 'MODULE_PATHNAME', 'getBoard'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-
-/******************************************************************************/
-
+CREATE FUNCTION getFirstMoves(chessgame, int)
+RETURNS chessgame
+AS 'MODULE_PATHNAME', 'getFirstMoves'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 /******************************************************************************/
