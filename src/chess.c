@@ -14,9 +14,10 @@
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
-
 #include "utils/builtins.h"
 #include "libpq/pqformat.h"
+
+#include "smallchesslib.h"
 
 PG_MODULE_MAGIC;
 
@@ -188,8 +189,271 @@ chessboard_constructor(PG_FUNCTION_ARGS)
 }
 
 /*****************************************************************************/
-// 6. Here we should implement our Functions on the Datatypes
+// Help functions
 
+void putCharacter(char c)
+{
+  putchar(c);
+}
+
+char str[4096];
+
+void putCharStr(char c)
+{
+  char *s = str;
+
+  while (*s != 0)
+    s++;
+
+  *s = c;
+  *(s + 1) = 0;
+}
+
+uint8_t test(const char *str, uint8_t cond)
+{
+  printf("- testing %s: ",str);
+
+  if (cond)
+  {
+    puts("OK");
+    return 1;
+  }
+
+  puts("ERROR");
+  return 0;
+}
+
+int strEquals(const char *s1, const char *s2)
+{
+  while (1)
+  {
+    if (*s1 != *s2)
+      return 0;
+
+    if (*s1 == 0 || *s2 == 0)
+      break;
+
+    s1++;
+    s2++;
+  }
+
+  return 1;
+}
+
+// Function 1: getBoard -> chessboard: Get FEN notation of the board after the given number of moves 
+chessboard getBoard(chessgame cg, int moves)
+{
+  // Initializing record for storing the PGN (SAN) string
+  int num_half_moves;
+  SCL_Record r;
+  SCL_recordInit(r);
+  SCL_recordFromPGN(r, cg.san);
+
+
+  // calculating the total number of half moves
+  num_half_moves= SCL_recordLength(r);
+
+  // printing the number of half moves
+  printf("number of half moves in the PGN notation= %d\n", num_half_moves);
+
+  // initializing a board to store the represent and make moves using the PGN (SAN) notation
+  SCL_Board b;
+  SCL_boardInit(b);
+
+  // printing the passed PGN (SAN) notation
+  SCL_printPGN(r, putCharacter, b);
+  printf("\n");
+
+  // initializing the retrun type
+  chessboard cb;
+
+  // initializing a game to play the chess game
+  SCL_Game g;
+  for(int i=0; i<SCL_BOARD_STATE_SIZE; i++)
+  {
+    g.board[i]= b[i];
+  }
+  for(int i=0; i<num_half_moves; i++)
+  {
+    g.record[i]= r[i];
+  }
+  g.state= SCL_GAME_STATE_PLAYING;
+  g.ply= num_half_moves;
+  SCL_gameInit(&g, 0);
+
+  if(moves <= num_half_moves)
+  {
+    // applying a fixed number of half moves to the chess game as passed in the argument
+    SCL_recordApply(r, b, moves);
+
+    // printing the board after applying the record
+    SCL_printBoardSimple(b, putCharacter, 1, SCL_PRINT_FORMAT_UTF8);
+    printf("\n");
+
+    // converting the board state to FEN notation
+    char fen_string[SCL_FEN_MAX_LENGTH];
+    int status= SCL_boardToFEN(b, fen_string);
+
+    // storing the FEN notation into the chessboard datatype
+    if (strlen(fen_string) < SCL_FEN_MAX_LENGTH)
+    {
+      strcpy(cb.fen, fen_string);
+    }
+    else
+    {
+      printf("ERROR: Input SAN string exceeds the maximum length of allowed FEN string");
+    }
+
+    // have to figure out what does this number mean
+    printf("status= %d\n", status);
+
+    // initializing a new board to verify the results
+    SCL_Board b2;
+    SCL_boardInit(b2);
+
+    // verifying the FEN notation using the new board
+    SCL_boardFromFEN(b2, fen_string);
+    SCL_printBoardSimple(b2, putCharacter, 1, SCL_PRINT_FORMAT_UTF8);
+  }
+
+  // returning the result
+  return cb;
+}
+
+// Function 2: getFirstMoves -> chessgame: Get the SAN moves truncated till the given number of half moves
+chessgame getFirstMoves(chessgame cg, int moves)
+{
+  chessgame cg_truncated;
+
+  // Initializing record for storing the PGN (SAN) string
+  SCL_Record r;
+  SCL_recordInit(r);
+  SCL_recordFromPGN(r, cg.san);
+
+  // calculating the total number of half moves
+  int num_half_moves= SCL_recordLength(r);
+
+  // printing the number of half moves
+  printf("number of half moves in the PGN notation= %d\n", num_half_moves);
+
+  // initializing a board to store the represent and make moves using the PGN (SAN) notation
+  SCL_Board b;
+  SCL_boardInit(b);
+
+  // printing the passed PGN (SAN) notation
+  printf("Original PGN notation:\n");
+  SCL_printPGN(r, putCharacter, b);
+  printf("\n");
+
+  // splitting the string using strtok
+  if(num_half_moves > moves)
+  {
+    char *token= strtok(cg.san, " ");
+    int half_move_count=1;
+    int token_counter=0;
+    char san_string_truncated[SCL_RECORD_MAX_SIZE];
+    while( token != NULL ) 
+    {
+      token_counter++;
+      // printf( "%s ", token);
+      strcat(san_string_truncated, token);
+      strcat(san_string_truncated, " ");
+      if(token_counter==2 || token_counter==3)
+      {
+        // printf( " %s %d\n", token, half_move_count );
+        // san_string_truncated[half_move_count-1]= *token;
+        // strcat(san_string_truncated, token);
+        half_move_count++;
+        if(half_move_count>moves)
+          break;
+      }
+      token = strtok(NULL, " ");
+      if(token_counter==3)
+      {
+        token_counter=0;
+      }
+    }
+    // printf("\n");
+
+    // printing the truncated string
+    // printf("%s\n", san_string_truncated);
+
+    // copying the truncated string to the SAN string of the chessgame datatype
+    strcpy(cg_truncated.san, san_string_truncated);
+  }
+
+  else
+  {
+    printf("ERROR: the number of half moves provided is > the number of half moves in the original PGN notation");
+  }
+
+  return cg_truncated; 
+}
+
+// Function 3: hasOpening -> bool: To check if the original and the given PGN have the same opening
+bool hasOpening(chessgame cg1, chessgame cg2)
+{
+  SCL_Record r1, r2;
+
+  SCL_recordInit(r1);
+  SCL_recordInit(r2);
+
+  SCL_recordFromPGN(r1, cg1.san);
+  SCL_recordFromPGN(r2, cg2.san);
+
+  int num_half_moves1= SCL_recordLength(r1);
+  printf("half moves in original PGN= %d\n", num_half_moves1);
+  int num_half_moves2= SCL_recordLength(r2);
+  printf("half moves in check PGN= %d\n", num_half_moves2);
+
+  // int size_r1= sizeof(r1)/sizeof(r1[0]);
+  // printf("%d\n", size_r1);
+  // int size_r2= sizeof(r2)/sizeof(r2[0]);
+  // printf("%d\n", size_r2);
+
+  int count1=0, count2=0;
+  for(int i=0; r1[i]!=0; i++)
+  {
+    // printf("%d", r1[i]);
+    count1++;
+  }
+  printf("c1=%d\n", count1);
+  // printf("\n");
+  for(int i=0; r2[i]!=0; i++)
+  {
+    // printf("%d", r2[i]);
+    count2++;
+  }
+  printf("c2=%d\n", count2);
+
+  if(num_half_moves2 < num_half_moves1)
+  {
+    for(int i=0, j=0; j<(count2-2); i++, j++)
+    {
+      if(r1[i] != r2[j])
+      {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+// Function 4: hasBoard -> bool: To check if the given chessgame has the given board state in the given half moves 
+bool hasBoard(chessgame cg, chessboard cb, int moves)
+{
+  chessboard cb_heuristic;
+  for(int i=1; i<moves; i++)
+  {
+    cb_heuristic= getBoard(cg, i);
+    if(strEquals(cb_heuristic.fen, cb.fen))
+    {
+      return true;
+    }
+  }
+  return false;
+}
 
 
 
