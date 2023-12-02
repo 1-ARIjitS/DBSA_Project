@@ -37,10 +37,11 @@ CREATE TYPE chessgame (
 );
 
 CREATE TYPE chessboard (
-  internallength = 90,
+  internallength =90,
   input          = chessboard_in,
   output         = chessboard_out
 );
+
 
 -- CREATE OR REPLACE FUNCTION chessgame(text)
 --   RETURNS chessgame
@@ -88,116 +89,6 @@ CREATE FUNCTION chessgame(text)
  * Functions from the assignment
  *****************************************************************************/
 
-
-
-
-/******************************************************************************
- * Operators
- ******************************************************************************/
-
-CREATE FUNCTION chessgame_eq(chessgame, chessgame)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_eq'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE FUNCTION chessboard_eq(chessboard, chessboard)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessboard_eq'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE FUNCTION chessgame_ne(chessgame, chessgame)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_ne'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-  CREATE FUNCTION chessboard_ne(chessboard, chessboard)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessboard_ne'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-
-/* Complete the following code by filling in the dots (...) 
- * This is the function for the strictly right '>>' operator
- */
-/*
-CREATE FUNCTION complex_right(...)
-  RETURNS ...
-  AS 'MODULE_PATHNAME', '...'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-*/
-
-/*CREATE FUNCTION complex_below(complex, complex)
-  *RETURNS boolean
-  *AS 'MODULE_PATHNAME', 'complex_below'
-  *LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-*/
-
-/* Write the code for the following function 
- * This is the function for the strictly above '|>>' operator
- */
-/*
-CREATE FUNCTION ...
-*/
-
-CREATE OPERATOR ~= (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_eq,
-  COMMUTATOR = ~=, NEGATOR = <>
-);
-
-CREATE OPERATOR ~= (
-  LEFTARG = chessboard, RIGHTARG = chessboard,
-  PROCEDURE = chessboard_eq,
-  COMMUTATOR = ~=, NEGATOR = <>
-);
-
-
-CREATE OPERATOR <> (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_ne,
-  COMMUTATOR = <>, NEGATOR = ~=
-);
-
-CREATE OPERATOR <> (
-  LEFTARG = chessboard, RIGHTARG = chessboard,
-  PROCEDURE = chessboard_ne,
-  COMMUTATOR = <>, NEGATOR = ~=
-);
-
-/*CREATE OPERATOR << (
-  *LEFTARG = complex, RIGHTARG = complex,
-  *PROCEDURE = complex_left,
-  *COMMUTATOR = >>
-*);
-*/
-
-/* Complete the following code by filling in the dots (...) 
- * This is the strictly right '>>' operator
- */
-/*
-CREATE OPERATOR >> (
-  LEFTARG = ..., RIGHTARG = ...,
-  PROCEDURE = ...,
-  COMMUTATOR = ...
-);
-*/
-
-/*CREATE OPERATOR <<| (
-  *LEFTARG = complex, RIGHTARG = complex,
-  *PROCEDURE = complex_below,
-  *COMMUTATOR = |>>
-*);
-*/
-
-/* Write the code for the following operator 
- * This is the strictly above '|>>' operator
- */
-/*
-CREATE OPERATOR ...
-*/
-
-/******************************************************************************/
-
 CREATE FUNCTION getBoard(chessgame, int)
 RETURNS chessboard
 AS 'MODULE_PATHNAME', 'getBoard'
@@ -213,4 +104,71 @@ RETURNS boolean
 AS 'MODULE_PATHNAME', 'hasOpening'
 LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-/******************************************************************************/
+CREATE FUNCTION hasBoard(chessgame, chessboard, int)
+RETURNS boolean
+AS 'MODULE_PATHNAME', 'hasBoard'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+
+/******************************************************************************
+ * Operators
+ ******************************************************************************/
+
+/* We are going to create the compare functions: */
+
+CREATE FUNCTION chessgame_eq(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_eq'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION chessgame_ne(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_ne'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION chessgame_left(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_left'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION chessgame_right(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_right'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
+  RETURNS integer
+  AS 'MODULE_PATHNAME', 'chessgame_cmp'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+/* We are going to create the Btree index: */
+
+CREATE OPERATOR = (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_eq,
+  COMMUTATOR = =, NEGATOR = !=
+);
+
+CREATE OPERATOR != (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_ne,
+  COMMUTATOR = !=, NEGATOR = =
+);
+
+CREATE OPERATOR > (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_left,
+  COMMUTATOR = >
+);
+
+CREATE OPERATOR < (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_right,
+  COMMUTATOR = <
+);
+
+
+CREATE OPERATOR CLASS chessgame_ops
+    DEFAULT FOR TYPE chessgame USING btree AS
+        OPERATOR        1       < ,
+        OPERATOR        2       > ,
+        OPERATOR        3       = ,
+        OPERATOR        4       != ,
+        FUNCTION        1       chessgame_cmp(chessgame, chessgame);

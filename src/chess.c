@@ -13,7 +13,6 @@
 #include <postgres.h>
 #include <float.h>
 #include <math.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include "utils/builtins.h"
@@ -67,10 +66,9 @@ chessgame_make(const char *san)
 {
     int i;
     chessgame *game = palloc0(sizeof(chessgame));
-    strcpy(game->san, san);
-    // for(i=0;i<SCL_RECORD_MAX_SIZE;i++){
-    //     game->san[i] = san[i];
-    // }                 
+    for(i=0;i<SCL_RECORD_MAX_SIZE;i++){
+        game->san[i] = san[i];
+    }                 
     return game;
 }
 
@@ -79,10 +77,9 @@ chessboard_make(const char *fen)
 {
     int i;
     chessboard *board = palloc0(sizeof(chessboard));
-    strcpy(board->fen, fen);
-    // for(i=0;i<SCL_FEN_MAX_LENGTH;i++){
-    //     board->fen[i] = fen[i];
-    // }                 
+    for(i=0;i<SCL_FEN_MAX_LENGTH;i++){
+        board->fen[i] = fen[i];
+    }                 
     return board;
 }
 
@@ -295,6 +292,7 @@ chessboard getBoard_internal(chessgame cg, int moves)
   g.state= SCL_GAME_STATE_PLAYING;
   g.ply= num_half_moves;
   SCL_gameInit(&g, 0);
+  
 
   if(moves <= num_half_moves)
   {
@@ -332,10 +330,6 @@ chessboard getBoard_internal(chessgame cg, int moves)
   }
   else
   {
-    for(int i=0;i<SCL_FEN_MAX_LENGTH;i++)
-    {
-      cb.fen[i]='\0';
-    }
     print("ERROR: Number of moves passed is greater than the number of half moves in the PGN");
   }
 
@@ -464,7 +458,6 @@ getFirstMoves(PG_FUNCTION_ARGS)
     PG_RETURN_ChessBoard(resultPtr);
 }
 
-
 // // Function 2: getFirstMoves -> chessgame: Get the SAN moves truncated till the given number of half moves
 // PG_FUNCTION_INFO_V1(getFirstMoves);
 // Datum getFirstMoves(PG_FUNCTION_ARGS)
@@ -569,14 +562,14 @@ bool hasOpening_internal(chessgame cg1, chessgame cg2)
     {
       if(cg1.san[i]!=cg2.san[i])
       {
-        result= false;
+        result = false;
         break;
       }
     }
   }
   else 
   {
-    result= false;
+    result = false;
   }
   return result;
 }
@@ -602,10 +595,10 @@ hasOpening(PG_FUNCTION_ARGS)
 }
 
 // Function 4: hasBoard -> bool: To check if the given chessgame has the given board state in the given half moves 
-bool hasBoard(chessgame cg, chessboard cb, int moves)
+bool hasBoard_internal(chessgame cg, chessboard cb, int moves)
 {
   chessboard cb_heuristic;
-  for(int i=1; i<moves; i++)
+  for(int i=0; i<=moves; i++)
   {
     cb_heuristic= getBoard_internal(cg, i);
     if(strEquals(cb_heuristic.fen, cb.fen))
@@ -616,7 +609,21 @@ bool hasBoard(chessgame cg, chessboard cb, int moves)
   return false;
 }
 
+PG_FUNCTION_INFO_V1(hasBoard);
+Datum 
+hasBoard(PG_FUNCTION_ARGS)
+{
+    chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
+    chessboard *cb = (chessboard *) PG_GETARG_POINTER(0);
+    int moves = PG_GETARG_INT32(1);
 
+    // Use hasOpening_internal to get the bool result
+    bool result = hasBoard_internal(*cg, *cb, moves);
+    PG_FREE_IF_COPY(cg, 0);
+    PG_FREE_IF_COPY(cb, 1); 
+    PG_FREE_IF_COPY(moves, 2);
+    PG_RETURN_BOOL(result);
+}
 
 /*****************************************************************************/
 //7. Compare functions and operators
@@ -651,51 +658,64 @@ chessgame_ne(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(result);
 }
 
-static bool
-chessboard_eq_internal(chessboard *b1, chessboard *b2)
-{
-    return strcmp(b1->fen, b2->fen) == 0;
-}
+/* This function answers to the operation contains (a > b, a constains b) */
 
-PG_FUNCTION_INFO_V1(chessboard_eq);
+PG_FUNCTION_INFO_V1(chessgame_left);
 Datum
-chessboard_eq(PG_FUNCTION_ARGS)
+chessgame_left(PG_FUNCTION_ARGS)
 {
-    chessboard *b1 = (chessboard *) PG_GETARG_POINTER(0);
-    chessboard *b2 = (chessboard *) PG_GETARG_POINTER(1);
-    bool result = chessboard_eq_internal(b1, b2);
+    chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
+    chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
+    bool result;
+    
+    result = hasOpening_internal(*b1,*b2);
+    
     PG_FREE_IF_COPY(b1, 0);
     PG_FREE_IF_COPY(b2, 1);
     PG_RETURN_BOOL(result);
 }
 
-PG_FUNCTION_INFO_V1(chessboard_ne);
+/* This function answers to the operation constained in (a < b, a is contained in b) */
+
+
+PG_FUNCTION_INFO_V1(chessgame_right);
 Datum
-chessboard_ne(PG_FUNCTION_ARGS)
+chessgame_right(PG_FUNCTION_ARGS)
 {
-    chessboard *b1 = (chessboard *) PG_GETARG_POINTER(0);
-    chessboard *b2 = (chessboard *) PG_GETARG_POINTER(1);
-    bool result = !chessboard_eq_internal(b1, b2);
+    chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
+    chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
+    bool result;
+
+    result = hasOpening_internal(*b2,*b1);
+
     PG_FREE_IF_COPY(b1, 0);
     PG_FREE_IF_COPY(b2, 1);
     PG_RETURN_BOOL(result);
 }
 
-
-
-//PG_FUNCTION_INFO_V1(chessgame_left);
-//Datum
-//chessgame_left(PG_FUNCTION_ARGS)
-//{
+/* cmp function for the B-Tree */
   
-//}
-
-//PG_FUNCTION_INFO_V1(chessgame_right);
-//Datum
-//chessgame_right(PG_FUNCTION_ARGS)
-//{
-//    
-//}
+PG_FUNCTION_INFO_V1(chessgame_cmp);
+Datum
+chessgame_cmp(PG_FUNCTION_ARGS)
+{
+  chessgame *cg1 = (chessgame *) PG_GETARG_POINTER(0);
+  chessgame *cg2 = (chessgame *) PG_GETARG_POINTER(1);
+  int result; 
+  
+  if (hasOpening_internal(*cg2, *cg1)==true)
+      result = -1;
+  else
+  {
+    if (hasOpening_internal(*cg1, *cg2)==true)
+      result = 1;
+    else 
+      result = 0;
+  }
+  PG_FREE_IF_COPY(cg1, 0);
+  PG_FREE_IF_COPY(cg2, 1);
+  PG_RETURN_INT32(result);
+}
 
 //PG_FUNCTION_INFO_V1(chessgame_below);
 //Datum
@@ -714,8 +734,6 @@ chessboard_ne(PG_FUNCTION_ARGS)
 //{
     //
 //}
-
-// same for chessboard here
 
 /*****************************************************************************/
 //8. In this section in the complex.c some add and division functions were defined
