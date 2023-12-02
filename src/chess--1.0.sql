@@ -111,26 +111,96 @@ LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 
 /******************************************************************************
- * Operators
+ * Indexes
  ******************************************************************************/
 
-/* We are going to create the compare functions: */
+/* In this first part, we develop an option for the BTree. This option
+ * consists on defining following operator: equality (=), inequality (!=), 
+ * contains (>) and is contained (<).
+ */
+
+-- CREATE FUNCTION chessgame_eq(chessgame, chessgame)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessgame_eq'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+-- CREATE FUNCTION chessgame_ne(chessgame, chessgame)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessgame_ne'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+-- CREATE FUNCTION chessgame_left(chessgame, chessgame)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessgame_left'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+-- CREATE FUNCTION chessgame_right(chessgame, chessgame)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessgame_right'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
+--   RETURNS integer
+--   AS 'MODULE_PATHNAME', 'chessgame_cmp'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- CREATE OPERATOR = (
+--   LEFTARG = chessgame, RIGHTARG = chessgame,
+--   PROCEDURE = chessgame_eq,
+--   COMMUTATOR = =, NEGATOR = !=
+-- );
+
+-- CREATE OPERATOR != (
+--   LEFTARG = chessgame, RIGHTARG = chessgame,
+--   PROCEDURE = chessgame_ne,
+--   COMMUTATOR = !=, NEGATOR = =
+-- );
+
+-- CREATE OPERATOR > (
+--   LEFTARG = chessgame, RIGHTARG = chessgame,
+--   PROCEDURE = chessgame_left,
+--   COMMUTATOR = >
+-- );
+
+-- CREATE OPERATOR < (
+--   LEFTARG = chessgame, RIGHTARG = chessgame,
+--   PROCEDURE = chessgame_right,
+--   COMMUTATOR = <
+-- );
+
+-- CREATE OPERATOR CLASS chessgame_ops
+--     DEFAULT FOR TYPE chessgame USING btree AS
+--         OPERATOR        1       < ,
+--         OPERATOR        2       > ,
+--         OPERATOR        3       = ,
+--         OPERATOR        4       != ,
+--         FUNCTION        1       chessgame_cmp(chessgame, chessgame);
+
+/* In this part, we developed a second version of the BTree. This one 
+ * makes use of the following operators: equality (=), inequality (!=),
+ * greater than (>), less than (<), greater-equal than (>=) and 
+ * less-equal than (<=) */
 
 CREATE FUNCTION chessgame_eq(chessgame, chessgame)
   RETURNS boolean
   AS 'MODULE_PATHNAME', 'chessgame_eq'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-CREATE FUNCTION chessgame_ne(chessgame, chessgame)
+
+CREATE FUNCTION chessgame_gt(chessgame, chessgame)
   RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_ne'
+  AS 'MODULE_PATHNAME', 'chessgame_gt'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-CREATE FUNCTION chessgame_left(chessgame, chessgame)
+
+CREATE FUNCTION chessgame_lt(chessgame, chessgame)
   RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_left'
+  AS 'MODULE_PATHNAME', 'chessgame_lt'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-CREATE FUNCTION chessgame_right(chessgame, chessgame)
+
+CREATE FUNCTION chessgame_ge(chessgame, chessgame)
   RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_right'
+  AS 'MODULE_PATHNAME', 'chessgame_ge'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION chessgame_le(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_le'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
@@ -138,37 +208,41 @@ CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
   AS 'MODULE_PATHNAME', 'chessgame_cmp'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-/* We are going to create the Btree index: */
-
 CREATE OPERATOR = (
   LEFTARG = chessgame, RIGHTARG = chessgame,
   PROCEDURE = chessgame_eq,
   COMMUTATOR = =, NEGATOR = !=
 );
 
-CREATE OPERATOR != (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_ne,
-  COMMUTATOR = !=, NEGATOR = =
-);
-
 CREATE OPERATOR > (
   LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_left,
+  PROCEDURE = chessgame_gt,
   COMMUTATOR = >
 );
 
 CREATE OPERATOR < (
   LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_right,
+  PROCEDURE = chessgame_lt,
   COMMUTATOR = <
 );
 
+CREATE OPERATOR >= (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_ge,
+  COMMUTATOR = >=
+);
+
+CREATE OPERATOR <= (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_le,
+  COMMUTATOR = <=
+);
 
 CREATE OPERATOR CLASS chessgame_ops
     DEFAULT FOR TYPE chessgame USING btree AS
         OPERATOR        1       < ,
         OPERATOR        2       > ,
         OPERATOR        3       = ,
-        OPERATOR        4       != ,
+        OPERATOR        4       <= ,
+        OPERATOR        5       >= ,
         FUNCTION        1       chessgame_cmp(chessgame, chessgame);
