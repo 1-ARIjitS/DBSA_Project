@@ -13,7 +13,9 @@
 #include <postgres.h>
 #include <float.h>
 #include <math.h>
+#include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "utils/builtins.h"
 #include "libpq/pqformat.h"
 
@@ -37,13 +39,13 @@ PG_MODULE_MAGIC;
 /* Structure to represent the chessgame */
 typedef struct chessgame
 {
-    char san[1000]; 
+    char san[SCL_RECORD_MAX_SIZE]; 
 } chessgame;
 
 /* Structure to represent the chessboard */
 typedef struct chessboard
 {
-    char fen[1000]; 
+    char fen[SCL_FEN_MAX_LENGTH]; 
 } chessboard;
 
 #define DatumGetChessBoard(X)  ((chessboard *) DatumGetPointer(X))
@@ -65,9 +67,10 @@ chessgame_make(const char *san)
 {
     int i;
     chessgame *game = palloc0(sizeof(chessgame));
-    for(i=0;i<100;i++){
-        game->san[i] = san[i];
-    }                 
+    strcpy(game->san, san);
+    // for(i=0;i<SCL_RECORD_MAX_SIZE;i++){
+    //     game->san[i] = san[i];
+    // }                 
     return game;
 }
 
@@ -76,9 +79,10 @@ chessboard_make(const char *fen)
 {
     int i;
     chessboard *board = palloc0(sizeof(chessboard));
-    for(i=0;i<100;i++){
-        board->fen[i] = fen[i];
-    }                 
+    strcpy(board->fen, fen);
+    // for(i=0;i<SCL_FEN_MAX_LENGTH;i++){
+    //     board->fen[i] = fen[i];
+    // }                 
     return board;
 }
 
@@ -261,7 +265,6 @@ chessboard getBoard_internal(chessgame cg, int moves)
   SCL_recordInit(r);
   SCL_recordFromPGN(r, cg.san);
 
-
   // calculating the total number of half moves
   num_half_moves= SCL_recordLength(r);
 
@@ -327,6 +330,14 @@ chessboard getBoard_internal(chessgame cg, int moves)
     SCL_boardFromFEN(b2, fen_string);
     SCL_printBoardSimple(b2, putCharacter, 1, SCL_PRINT_FORMAT_UTF8);
   }
+  else
+  {
+    for(int i=0;i<SCL_FEN_MAX_LENGTH;i++)
+    {
+      cb.fen[i]='\0';
+    }
+    print("ERROR: Number of moves passed is greater than the number of half moves in the PGN");
+  }
 
   // returning the result
   return cb;
@@ -345,26 +356,23 @@ getBoard(PG_FUNCTION_ARGS)
     PG_FREE_IF_COPY(moves, 1);
 
     // Create a dynamically allocated copy of the result to return
-    chessboard *resultPtr = (chessboard *)palloc(sizeof(chessboard));
+    chessboard *resultPtr = (chessboard *)palloc0(sizeof(chessboard));
     *resultPtr = result;
 
     // Return the pointer to the dynamically allocated copy
     PG_RETURN_ChessBoard(resultPtr);
 }
 
-
 // Function 2: getFirstMoves -> chessgame: Get the SAN moves truncated till the given number of half moves
-PG_FUNCTION_INFO_V1(getFirstMoves);
-Datum getFirstMoves(PG_FUNCTION_ARGS)
+chessgame getFirstMoves_internal(chessgame cg, int moves)
 {
   chessgame cg_truncated;
+  char san_str_truncated[SCL_RECORD_MAX_SIZE]={'\0'};
 
   // Initializing record for storing the PGN (SAN) string
-  chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
-  int moves = PG_GETARG_INT32(1);
   SCL_Record r;
   SCL_recordInit(r);
-  SCL_recordFromPGN(r, cg->san);
+  SCL_recordFromPGN(r, cg.san);
 
   // calculating the total number of half moves
   int num_half_moves= SCL_recordLength(r);
@@ -382,62 +390,167 @@ Datum getFirstMoves(PG_FUNCTION_ARGS)
   printf("\n");
 
   // splitting the string using strtok
-  if(num_half_moves > moves)
+  if(num_half_moves >= moves)
   {
-    char *token= strtok(cg->san, " ");
-    int half_move_count=1;
+    char *token= strtok(cg.san, " ");
     int token_counter=0;
-    char san_string_truncated[SCL_RECORD_MAX_SIZE];
+    int half_move_counter=0;
     while( token != NULL ) 
     {
       token_counter++;
-      // printf( "%s ", token);
-      strcat(san_string_truncated, token);
-      strcat(san_string_truncated, " ");
+      // printf( " %s\n", token ); //printing each token
+      // printf("%d ", token_counter);
+      strcat(san_str_truncated, token);
+      strcat(san_str_truncated, " ");
       if(token_counter==2 || token_counter==3)
       {
-        // printf( " %s %d\n", token, half_move_count );
-        // san_string_truncated[half_move_count-1]= *token;
-        // strcat(san_string_truncated, token);
-        half_move_count++;
-        if(half_move_count>moves)
-          break;
+        half_move_counter++;
+        // printf( " %s\n", token ); //printing each token
       }
-      token = strtok(NULL, " ");
+      if(half_move_counter==moves)
+      {
+        break;
+      }
       if(token_counter==3)
       {
         token_counter=0;
       }
+      token = strtok(NULL, " ");
     }
-    // printf("\n");
-
-    // printing the truncated string
-    // printf("%s\n", san_string_truncated);
-
-    // copying the truncated string to the SAN string of the chessgame datatype
-    strcpy(cg_truncated.san, san_string_truncated);
+    strcat(san_str_truncated, "\0");
+    printf("%s\n", san_str_truncated);
+    int ele_count=0;
+    for(int i=0;san_str_truncated[i]!='\0';i++)
+    {
+      // printf("%c",san_str_truncated[i]);
+      ele_count+=1;
+    }
+    // initialize the character array i.e. string
+    for(int i=0;i<SCL_RECORD_MAX_SIZE;i++)
+    {
+      cg_truncated.san[i]='\0';
+    }
+    for(int i=0;san_str_truncated[i]!='\0';i++)
+    {
+      cg_truncated.san[i]= san_str_truncated[i];
+    }
   }
 
   else
   {
-    printf("ERROR: the number of half moves provided is > the number of half moves in the original PGN notation");
+    printf("ERROR: the number of half moves provided is > the number of half moves in the original PGN notation\n");
   }
 
-  // Create a dynamically allocated copy of the result to return
-  chessgame *resultPtr = (chessgame *)palloc(sizeof(chessgame));
-  *resultPtr = cg_truncated;
-
-  PG_FREE_IF_COPY(cg, 0);
-  PG_FREE_IF_COPY(moves,1);
-
-  // Return the pointer to the dynamically allocated copy
-  PG_RETURN_ChessGame(resultPtr);
+  return cg_truncated; 
 }
 
+PG_FUNCTION_INFO_V1(getFirstMoves);
+Datum 
+getFirstMoves(PG_FUNCTION_ARGS)
+{
+    chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
+    int moves = PG_GETARG_INT32(1);
+
+    // Use getBoard_internal to get the chessboard result
+    chessgame result = getFirstMoves_internal(*cg, moves);
+    PG_FREE_IF_COPY(cg, 0);
+    PG_FREE_IF_COPY(moves, 1); 
+
+    // Create a dynamically allocated copy of the result to return
+    chessgame *resultPtr = (chessgame *)palloc0(sizeof(chessgame));
+    *resultPtr = result;
+
+    // Return the pointer to the dynamically allocated copy 
+    PG_RETURN_ChessBoard(resultPtr);
+}
+
+
+// // Function 2: getFirstMoves -> chessgame: Get the SAN moves truncated till the given number of half moves
+// PG_FUNCTION_INFO_V1(getFirstMoves);
+// Datum getFirstMoves(PG_FUNCTION_ARGS)
+// {
+//   chessgame cg_truncated;
+
+//   // Initializing record for storing the PGN (SAN) string
+//   chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
+//   int moves = PG_GETARG_INT32(1);
+//   SCL_Record r;
+//   SCL_recordInit(r);
+//   SCL_recordFromPGN(r, cg->san);
+
+//   // calculating the total number of half moves
+//   int num_half_moves= SCL_recordLength(r);
+
+//   // printing the number of half moves
+//   printf("number of half moves in the PGN notation= %d\n", num_half_moves);
+
+//   // initializing a board to store the represent and make moves using the PGN (SAN) notation
+//   SCL_Board b;
+//   SCL_boardInit(b);
+
+//   // printing the passed PGN (SAN) notation
+//   printf("Original PGN notation:\n");
+//   SCL_printPGN(r, putCharacter, b);
+//   printf("\n");
+
+//   // splitting the string using strtok
+//   if(num_half_moves > moves)
+//   {
+//     char *token= strtok(cg->san, " ");
+//     int half_move_count=1;
+//     int token_counter=0;
+//     char san_string_truncated[SCL_RECORD_MAX_SIZE];
+//     while( token != NULL ) 
+//     {
+//       token_counter++;
+//       // printf( "%s ", token);
+//       strcat(san_string_truncated, token);
+//       strcat(san_string_truncated, " ");
+//       if(token_counter==2 || token_counter==3)
+//       {
+//         // printf( " %s %d\n", token, half_move_count );
+//         // san_string_truncated[half_move_count-1]= *token;
+//         // strcat(san_string_truncated, token);
+//         half_move_count++;
+//         if(half_move_count>moves)
+//           break;
+//       }
+//       token = strtok(NULL, " ");
+//       if(token_counter==3)
+//       {
+//         token_counter=0;
+//       }
+//     }
+//     // printf("\n");
+
+//     // printing the truncated string
+//     // printf("%s\n", san_string_truncated);
+
+//     // copying the truncated string to the SAN string of the chessgame datatype
+//     strcpy(cg_truncated.san, san_string_truncated);
+//   }
+
+//   else
+//   {
+//     printf("ERROR: the number of half moves provided is > the number of half moves in the original PGN notation");
+//   }
+
+//   // Create a dynamically allocated copy of the result to return
+//   chessgame *resultPtr = (chessgame *)palloc(sizeof(chessgame));
+//   *resultPtr = cg_truncated;
+
+//   PG_FREE_IF_COPY(cg, 0);
+//   PG_FREE_IF_COPY(moves,1);
+
+//   // Return the pointer to the dynamically allocated copy
+//   PG_RETURN_ChessGame(resultPtr);
+// }
+
 // Function 3: hasOpening -> bool: To check if the original and the given PGN have the same opening
-bool hasOpening(chessgame cg1, chessgame cg2)
+bool hasOpening_internal(chessgame cg1, chessgame cg2)
 {
   SCL_Record r1, r2;
+  bool result= true;
 
   SCL_recordInit(r1);
   SCL_recordInit(r2);
@@ -450,38 +563,42 @@ bool hasOpening(chessgame cg1, chessgame cg2)
   int num_half_moves2= SCL_recordLength(r2);
   printf("half moves in check PGN= %d\n", num_half_moves2);
 
-  // int size_r1= sizeof(r1)/sizeof(r1[0]);
-  // printf("%d\n", size_r1);
-  // int size_r2= sizeof(r2)/sizeof(r2[0]);
-  // printf("%d\n", size_r2);
-
-  int count1=0, count2=0;
-  for(int i=0; r1[i]!=0; i++)
+  if(num_half_moves2 <= num_half_moves1)
   {
-    // printf("%d", r1[i]);
-    count1++;
-  }
-  printf("c1=%d\n", count1);
-  // printf("\n");
-  for(int i=0; r2[i]!=0; i++)
-  {
-    // printf("%d", r2[i]);
-    count2++;
-  }
-  printf("c2=%d\n", count2);
-
-  if(num_half_moves2 < num_half_moves1)
-  {
-    for(int i=0, j=0; j<(count2-2); i++, j++)
+    for(int i=0; cg2.san[i]!='\0'; i++)
     {
-      if(r1[i] != r2[j])
+      if(cg1.san[i]!=cg2.san[i])
       {
-        return false;
+        result= false;
+        break;
       }
     }
   }
+  else 
+  {
+    result= false;
+  }
+  return result;
+}
 
-  return true;
+PG_FUNCTION_INFO_V1(hasOpening);
+Datum 
+hasOpening(PG_FUNCTION_ARGS)
+{
+    chessgame *cg1 = (chessgame *) PG_GETARG_POINTER(0);
+    chessgame *cg2 = (chessgame *) PG_GETARG_POINTER(1);
+
+    // Use getBoard_internal to get the chessboard result
+    bool result = hasOpening_internal(*cg1, *cg2);
+    PG_FREE_IF_COPY(cg1, 0);
+    PG_FREE_IF_COPY(cg2, 1); 
+
+    // Create a dynamically allocated copy of the result to return
+    // chessgame *resultPtr = (chessgame *)palloc0(sizeof(chessgame));
+    // *resultPtr = result;
+
+    // Return the pointer to the dynamically allocated copy 
+    PG_RETURN_BOOL(result);
 }
 
 // Function 4: hasBoard -> bool: To check if the given chessgame has the given board state in the given half moves 

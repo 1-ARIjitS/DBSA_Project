@@ -31,17 +31,16 @@ CREATE OR REPLACE FUNCTION chessboard_in(cstring)
   
 
 CREATE TYPE chessgame (
-  internallength = 100,
+  internallength = 512,
   input          = chessgame_in,
   output         = chessgame_out
 );
 
 CREATE TYPE chessboard (
-  internallength = 100,
+  internallength = 90,
   input          = chessboard_in,
   output         = chessboard_out
 );
-
 
 -- CREATE OR REPLACE FUNCTION chessgame(text)
 --   RETURNS chessgame
@@ -207,6 +206,11 @@ LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 CREATE FUNCTION getFirstMoves(chessgame, int)
 RETURNS chessgame
 AS 'MODULE_PATHNAME', 'getFirstMoves'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION hasOpening(chessgame, chessgame)
+RETURNS boolean
+AS 'MODULE_PATHNAME', 'hasOpening'
 LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 /******************************************************************************/
