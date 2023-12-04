@@ -18,6 +18,7 @@
 #include "utils/builtins.h"
 #include "libpq/pqformat.h"
 
+
 #include "smallchesslib.h"
 
 PG_MODULE_MAGIC;
@@ -632,118 +633,6 @@ hasBoard(PG_FUNCTION_ARGS)
  * contains (>) and is contained (<).
  */
 
-// static bool
-// chessgame_eq_internal(chessgame *g1, chessgame *g2)
-// {
-//     return strcmp(g1->san, g2->san) == 0;
-// }
-
-// PG_FUNCTION_INFO_V1(chessgame_eq);
-// Datum
-// chessgame_eq(PG_FUNCTION_ARGS)
-// {
-//     chessgame *g1 = (chessgame *) PG_GETARG_POINTER(0);
-//     chessgame *g2 = (chessgame *) PG_GETARG_POINTER(1);
-//     bool result = chessgame_eq_internal(g1, g2);
-//     PG_FREE_IF_COPY(g1, 0);
-//     PG_FREE_IF_COPY(g2, 1);
-//     PG_RETURN_BOOL(result);
-// }
-
-// PG_FUNCTION_INFO_V1(chessgame_ne);
-// Datum
-// chessgame_ne(PG_FUNCTION_ARGS)
-// {
-//     chessgame *g1 = (chessgame *) PG_GETARG_POINTER(0);
-//     chessgame *g2 = (chessgame *) PG_GETARG_POINTER(1);
-//     bool result = !chessgame_eq_internal(g1, g2);
-//     PG_FREE_IF_COPY(g1, 0);
-//     PG_FREE_IF_COPY(g2, 1);
-//     PG_RETURN_BOOL(result);
-// }
-
-// /* This function answers to the operation contains (a > b, a constains b) */
-
-// PG_FUNCTION_INFO_V1(chessgame_left);
-// Datum
-// chessgame_left(PG_FUNCTION_ARGS)
-// {
-//     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
-//     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
-//     bool result;
-    
-//     result = hasOpening_internal(*b1,*b2);
-    
-//     PG_FREE_IF_COPY(b1, 0);
-//     PG_FREE_IF_COPY(b2, 1);
-//     PG_RETURN_BOOL(result);
-// }
-
-// /* This function answers to the operation constained in (a < b, a is contained in b) */
-
-
-// PG_FUNCTION_INFO_V1(chessgame_right);
-// Datum
-// chessgame_right(PG_FUNCTION_ARGS)
-// {
-//     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
-//     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
-//     bool result;
-
-//     result = hasOpening_internal(*b2,*b1);
-
-//     PG_FREE_IF_COPY(b1, 0);
-//     PG_FREE_IF_COPY(b2, 1);
-//     PG_RETURN_BOOL(result);
-// }
-
-// /* cmp function for the B-Tree */
-  
-// PG_FUNCTION_INFO_V1(chessgame_cmp);
-// Datum
-// chessgame_cmp(PG_FUNCTION_ARGS)
-// {
-//   chessgame *cg1 = (chessgame *) PG_GETARG_POINTER(0);
-//   chessgame *cg2 = (chessgame *) PG_GETARG_POINTER(1);
-//   int result; 
-  
-//   if (hasOpening_internal(*cg2, *cg1)==true)
-//       result = -1;
-//   else
-//   {
-//     if (hasOpening_internal(*cg1, *cg2)==true)
-//       result = 1;
-//     else 
-//       result = 0;
-//   }
-//   PG_FREE_IF_COPY(cg1, 0);
-//   PG_FREE_IF_COPY(cg2, 1);
-//   PG_RETURN_INT32(result);
-// }
-
-//PG_FUNCTION_INFO_V1(chessgame_below);
-//Datum
-//chessgame_below(PG_FUNCTION_ARGS)
-//{
-    
-//}
-
-/* Write the code for the following function 
- * This is the function for the strictly above '|>>' operator
- */
- 
-//PG_FUNCTION_INFO_V1(chessgame_above);
-//Datum
-//chessgame_above(PG_FUNCTION_ARGS)
-//{
-    //
-//}
-
-/* In this part, we developed a second version of the BTree. This one 
- * makes use of the following operators: equality (=), inequality (!=),
- * greater than (>), less than (<), greater-equal than (>=) and 
- * less-equal than (<=) */
-
 static bool
 chessgame_eq_internal(chessgame *g1, chessgame *g2)
 {
@@ -762,130 +651,56 @@ chessgame_eq(PG_FUNCTION_ARGS)
     PG_RETURN_BOOL(result);
 }
 
-static bool
-chessgame_gt_internal(chessgame *b1, chessgame *b2)
+PG_FUNCTION_INFO_V1(chessgame_neq);
+Datum
+chessgame_neq(PG_FUNCTION_ARGS)
 {
-  SCL_Record r;
-  SCL_recordInit(r);
-  SCL_recordFromPGN(r, b1->san);
-
-  SCL_Record s;
-  SCL_recordInit(s);
-  SCL_recordFromPGN(s, b2->san);
-
-  // calculating the total number of half moves 
-  int num_half_moves_1 = SCL_recordLength(r);
-  int num_half_moves_2 = SCL_recordLength(s);
-
-  return num_half_moves_1>num_half_moves_2;
+    chessgame *g1 = (chessgame *) PG_GETARG_POINTER(0);
+    chessgame *g2 = (chessgame *) PG_GETARG_POINTER(1);
+    bool result = !chessgame_eq_internal(g1, g2);
+    PG_FREE_IF_COPY(g1, 0);
+    PG_FREE_IF_COPY(g2, 1);
+    PG_RETURN_BOOL(result);
 }
 
-PG_FUNCTION_INFO_V1(chessgame_gt);
+
+/* This function answers to the operation contains (a > b, a constains b) */
+
+PG_FUNCTION_INFO_V1(chessgame_left);
 Datum
-chessgame_gt(PG_FUNCTION_ARGS)
+chessgame_left(PG_FUNCTION_ARGS)
 {
     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
-    bool result = chessgame_gt_internal(b1, b2);
+    bool result;
+    
+    result = hasOpening_internal(*b1,*b2);
     
     PG_FREE_IF_COPY(b1, 0);
     PG_FREE_IF_COPY(b2, 1);
     PG_RETURN_BOOL(result);
 }
 
-static bool
-chessgame_lt_internal(chessgame *b1, chessgame *b2)
-{
-  SCL_Record r;
-  SCL_recordInit(r);
-  SCL_recordFromPGN(r, b1->san);
+/* This function answers to the operation constained in (a < b, a is contained in b) */
 
-  SCL_Record s;
-  SCL_recordInit(s);
-  SCL_recordFromPGN(s, b2->san);
 
-  // calculating the total number of half moves 
-  int num_half_moves_1 = SCL_recordLength(r);
-  int num_half_moves_2 = SCL_recordLength(s);
-
-  return num_half_moves_1<num_half_moves_2;
-}
-
-PG_FUNCTION_INFO_V1(chessgame_lt);
+PG_FUNCTION_INFO_V1(chessgame_right);
 Datum
-chessgame_lt(PG_FUNCTION_ARGS)
+chessgame_right(PG_FUNCTION_ARGS)
 {
     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
-    bool result = chessgame_lt_internal(b1, b2);
-    
+    bool result;
+
+    result = hasOpening_internal(*b2,*b1);
+
     PG_FREE_IF_COPY(b1, 0);
     PG_FREE_IF_COPY(b2, 1);
     PG_RETURN_BOOL(result);
 }
 
-static bool
-chessgame_ge_internal(chessgame *b1, chessgame *b2)
-{
-  SCL_Record r;
-  SCL_recordInit(r);
-  SCL_recordFromPGN(r, b1->san);
-
-  SCL_Record s;
-  SCL_recordInit(s);
-  SCL_recordFromPGN(s, b2->san);
-
-  // calculating the total number of half moves 
-  int num_half_moves_1 = SCL_recordLength(r);
-  int num_half_moves_2 = SCL_recordLength(s);
-
-  return num_half_moves_1>=num_half_moves_2;
-}
-
-PG_FUNCTION_INFO_V1(chessgame_ge);
-Datum
-chessgame_ge(PG_FUNCTION_ARGS)
-{
-    chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
-    chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
-    bool result = chessgame_ge_internal(b1, b2);
-    
-    PG_FREE_IF_COPY(b1, 0);
-    PG_FREE_IF_COPY(b2, 1);
-    PG_RETURN_BOOL(result);
-}
-
-static bool
-chessgame_le_internal(chessgame *b1, chessgame *b2)
-{
-  SCL_Record r;
-  SCL_recordInit(r);
-  SCL_recordFromPGN(r, b1->san);
-
-  SCL_Record s;
-  SCL_recordInit(s);
-  SCL_recordFromPGN(s, b2->san);
-
-  // calculating the total number of half moves 
-  int num_half_moves_1 = SCL_recordLength(r);
-  int num_half_moves_2 = SCL_recordLength(s);
-
-  return num_half_moves_1<=num_half_moves_2;
-}
-
-PG_FUNCTION_INFO_V1(chessgame_le);
-Datum
-chessgame_le(PG_FUNCTION_ARGS)
-{
-    chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
-    chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
-    bool result = chessgame_le_internal(b1, b2);
-    
-    PG_FREE_IF_COPY(b1, 0);
-    PG_FREE_IF_COPY(b2, 1);
-    PG_RETURN_BOOL(result);
-}
-
+/* cmp function for the B-Tree */
+  
 PG_FUNCTION_INFO_V1(chessgame_cmp);
 Datum
 chessgame_cmp(PG_FUNCTION_ARGS)
@@ -894,11 +709,11 @@ chessgame_cmp(PG_FUNCTION_ARGS)
   chessgame *cg2 = (chessgame *) PG_GETARG_POINTER(1);
   int result; 
   
-  if (chessgame_lt_internal(cg1, cg2))
+  if (hasOpening_internal(*cg2, *cg1)==true)
       result = -1;
   else
   {
-    if (chessgame_gt_internal(cg1, cg2))
+    if (hasOpening_internal(*cg1, *cg2)==true)
       result = 1;
     else 
       result = 0;
@@ -907,3 +722,437 @@ chessgame_cmp(PG_FUNCTION_ARGS)
   PG_FREE_IF_COPY(cg2, 1);
   PG_RETURN_INT32(result);
 }
+
+/* In this part, we developed a second version of the BTree. This one 
+ * makes use of the following operators: equality (=),
+ * greater than (>), less than (<), greater-equal than (>=) and 
+ * less-equal than (<=) */
+
+
+// static bool
+// chessgame_eq_internal(chessgame *g1, chessgame *g2)
+// {
+//     return strlen(g1->san)==strlen(g2->san);
+// }
+
+// PG_FUNCTION_INFO_V1(chessgame_eq);
+// Datum
+// chessgame_eq(PG_FUNCTION_ARGS)
+// {
+//     chessgame *g1 = (chessgame *) PG_GETARG_POINTER(0);
+//     chessgame *g2 = (chessgame *) PG_GETARG_POINTER(1);
+//     bool result = chessgame_eq_internal(g1, g2);
+//     PG_FREE_IF_COPY(g1, 0);
+//     PG_FREE_IF_COPY(g2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// static bool
+// chessgame_gt_internal(chessgame *b1, chessgame *b2)
+// {
+//   SCL_Record r;
+//   SCL_recordInit(r);
+//   SCL_recordFromPGN(r, b1->san);
+
+//   SCL_Record s;
+//   SCL_recordInit(s);
+//   SCL_recordFromPGN(s, b2->san);
+
+//   // calculating the total number of half moves 
+//   int num_half_moves_1 = SCL_recordLength(r);
+//   int num_half_moves_2 = SCL_recordLength(s);
+
+//   return num_half_moves_1>num_half_moves_2;
+// }
+
+// PG_FUNCTION_INFO_V1(chessgame_gt);
+// Datum
+// chessgame_gt(PG_FUNCTION_ARGS)
+// {
+//     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
+//     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
+//     bool result = chessgame_gt_internal(b1, b2);
+    
+//     PG_FREE_IF_COPY(b1, 0);
+//     PG_FREE_IF_COPY(b2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// static bool
+// chessgame_lt_internal(chessgame *b1, chessgame *b2)
+// {
+//   SCL_Record r;
+//   SCL_recordInit(r);
+//   SCL_recordFromPGN(r, b1->san);
+
+//   SCL_Record s;
+//   SCL_recordInit(s);
+//   SCL_recordFromPGN(s, b2->san);
+
+//   // calculating the total number of half moves 
+//   int num_half_moves_1 = SCL_recordLength(r);
+//   int num_half_moves_2 = SCL_recordLength(s);
+
+//   return num_half_moves_1<num_half_moves_2;
+// }
+
+// PG_FUNCTION_INFO_V1(chessgame_lt);
+// Datum
+// chessgame_lt(PG_FUNCTION_ARGS)
+// {
+//     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
+//     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
+//     bool result = chessgame_lt_internal(b1, b2);
+    
+//     PG_FREE_IF_COPY(b1, 0);
+//     PG_FREE_IF_COPY(b2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// static bool
+// chessgame_ge_internal(chessgame *b1, chessgame *b2)
+// {
+//   SCL_Record r;
+//   SCL_recordInit(r);
+//   SCL_recordFromPGN(r, b1->san);
+
+//   SCL_Record s;
+//   SCL_recordInit(s);
+//   SCL_recordFromPGN(s, b2->san);
+
+//   // calculating the total number of half moves 
+//   int num_half_moves_1 = SCL_recordLength(r);
+//   int num_half_moves_2 = SCL_recordLength(s);
+
+//   return num_half_moves_1>=num_half_moves_2;
+// }
+
+// PG_FUNCTION_INFO_V1(chessgame_ge);
+// Datum
+// chessgame_ge(PG_FUNCTION_ARGS)
+// {
+//     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
+//     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
+//     bool result = chessgame_ge_internal(b1, b2);
+    
+//     PG_FREE_IF_COPY(b1, 0);
+//     PG_FREE_IF_COPY(b2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// static bool
+// chessgame_le_internal(chessgame *b1, chessgame *b2)
+// {
+//   SCL_Record r;
+//   SCL_recordInit(r);
+//   SCL_recordFromPGN(r, b1->san);
+
+//   SCL_Record s;
+//   SCL_recordInit(s);
+//   SCL_recordFromPGN(s, b2->san);
+
+//   // calculating the total number of half moves 
+//   int num_half_moves_1 = SCL_recordLength(r);
+//   int num_half_moves_2 = SCL_recordLength(s);
+
+//   return num_half_moves_1<=num_half_moves_2;
+// }
+
+// PG_FUNCTION_INFO_V1(chessgame_le);
+// Datum
+// chessgame_le(PG_FUNCTION_ARGS)
+// {
+//     chessgame *b1 = (chessgame *) PG_GETARG_POINTER(0);
+//     chessgame *b2 = (chessgame *) PG_GETARG_POINTER(1);
+//     bool result = chessgame_le_internal(b1, b2);
+    
+//     PG_FREE_IF_COPY(b1, 0);
+//     PG_FREE_IF_COPY(b2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// PG_FUNCTION_INFO_V1(chessgame_cmp);
+// Datum
+// chessgame_cmp(PG_FUNCTION_ARGS)
+// {
+//   chessgame *cg1 = (chessgame *) PG_GETARG_POINTER(0);
+//   chessgame *cg2 = (chessgame *) PG_GETARG_POINTER(1);
+//   int result; 
+  
+//   if (chessgame_lt_internal(cg1, cg2))
+//       result = -1;
+//   else
+//   {
+//     if (chessgame_gt_internal(cg1, cg2))
+//       result = 1;
+//     else 
+//       result = 0;
+//   }
+//   PG_FREE_IF_COPY(cg1, 0);
+//   PG_FREE_IF_COPY(cg2, 1);
+//   PG_RETURN_INT32(result);
+// }
+
+
+
+/* As last, we have to develop the overlap function, which we will use 
+ * for the GIN index later.
+ */
+
+// static bool
+// chessboard_eq_internal(chessboard cb1, chessboard cb2)
+// {
+//     return strcmp(cb1.fen, cb2.fen) == 0;
+// }
+
+// PG_FUNCTION_INFO_V1(chessboard_eq);
+// Datum
+// chessboard_eq(PG_FUNCTION_ARGS)
+// {
+//     chessboard *cb1 = (chessboard *) PG_GETARG_POINTER(0);
+//     chessboard *cb2 = (chessboard *) PG_GETARG_POINTER(1);
+//     bool result = chessboard_eq_internal(*cb1, *cb2);
+//     PG_FREE_IF_COPY(cb1, 0);
+//     PG_FREE_IF_COPY(cb2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// static bool
+// chessboard_at_greater_internal(chessboard cb1, chessboard cb2)
+// {
+//     bool result= true;
+//     for(int i=0;cb2.fen[i]!='\0';i++)
+//     {
+//       for(int j=0;j<cb1.fen[i]!='\0';j++)
+//       {
+//         if(cb1.fen[i]!=cb2.fen[j])
+//         {
+//           result= false;
+//           break;
+//         }
+//       }
+//       if(result == false)
+//       {
+//         return result;
+//       }
+//     }
+//     return result;
+//     // does the first array contain the second
+//     // hashing the first array
+// }
+
+// /* This function answers to the operation contains (a > b, a constains b) */
+
+// PG_FUNCTION_INFO_V1(chessboard_at_greater);
+// Datum
+// chessboard_at_greater(PG_FUNCTION_ARGS)
+// {
+//     chessboard *cb1 = (chessboard *) PG_GETARG_POINTER(0);
+//     chessboard *cb2 = (chessboard *) PG_GETARG_POINTER(1);
+//     bool result = chessboard_at_greater_internal(*cb1, *cb2);
+//     PG_FREE_IF_COPY(cb1, 0);
+//     PG_FREE_IF_COPY(cb2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// static bool
+// chessboard_at_less_internal(chessboard cb1, chessboard cb2)
+// {
+//     bool result= true;
+//     for(int i=0;cb1.fen[i]!='\0';i++)
+//     {
+//       for(int j=0;j<cb2.fen[i]!='\0';j++)
+//       {
+//         if(cb1.fen[i]!=cb2.fen[i])
+//         {
+//           result= false;
+//           break;
+//         }
+//       }
+//       if(result == false)
+//       {
+//         return result;
+//       }
+//     }
+//     return result;
+//     // does the second array contain the first
+//     // hashing the second array
+// }
+
+// /* This function answers to the operation contains (a < b, a is contained in b) */
+
+// PG_FUNCTION_INFO_V1(chessboard_at_less);
+// Datum
+// chessboard_at_less(PG_FUNCTION_ARGS)
+// {
+//     chessboard *cb1 = (chessboard *) PG_GETARG_POINTER(0);
+//     chessboard *cb2 = (chessboard *) PG_GETARG_POINTER(1);
+//     bool result = chessboard_at_less_internal(*cb1, *cb2);
+//     PG_FREE_IF_COPY(cb1, 0);
+//     PG_FREE_IF_COPY(cb2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// static bool
+// chessboard_and_internal(chessboard cb1, chessboard cb2)
+// {
+//     bool result= false;
+//     for(int i=0;cb1.fen[i]!='\0';i++)
+//     {
+//       for(int j=0;j<cb2.fen[i]!='\0';j++)
+//       {
+//         if(cb1.fen[i]==cb2.fen[i])
+//         {
+//           result= true;
+//           break;
+//         }
+//       }
+//       if(result == true)
+//       {
+//         return result;
+//       }
+//     }
+//     return result;
+// }
+
+// /* This function answers to the operation overlap ((a U b)!=0) */
+
+// PG_FUNCTION_INFO_V1(chessboard_and);
+// Datum
+// chessboard_and(PG_FUNCTION_ARGS)
+// {
+//     chessboard *cb1 = (chessboard *) PG_GETARG_POINTER(0);
+//     chessboard *cb2 = (chessboard *) PG_GETARG_POINTER(1);
+//     bool result = chessboard_and_internal(*cb1, *cb2);
+//     PG_FREE_IF_COPY(cb1, 0);
+//     PG_FREE_IF_COPY(cb2, 1);
+//     PG_RETURN_BOOL(result);
+// }
+
+// char gin_extractValue_internal(chessboard cb, int32_t *nkeys)
+// {
+//   *nkeys= strlen(cb.fen);
+
+//   // Allocate memory for the keys array
+//   char *keys = palloc(*nkeys * sizeof(char));
+
+//   // Allocate memory for the null flags array
+//   // *nullFlags = palloc(*nkeys * sizeof(bool));
+
+//   // Extract each character from the FEN string as a key
+//   for (int i = 0; i < *nkeys; i++) {
+//       keys[i] = cb.fen[i];
+
+//       // Assume that null is represented by '0' in the FEN string
+//       // (*nullFlags)[i] = (cb.fen[i] == '0');
+//   }
+  
+//   return keys;
+// }
+
+// PG_FUNCTION_INFO_V1(gin_extractValue);
+// Datum
+// gin_extractValue(PG_FUNCTION_ARGS)
+// {
+//     chessboard *cb = (chessboard *) PG_GETARG_POINTER(0);
+//     int32_t keys = PG_GETARG_INT32(1);
+
+//     // Use getBoard_internal to get the chessboard result
+//     chessboard result;
+//     strcpy(result.fen, gin_extractValue_internal(*cb, keys));
+//     PG_FREE_IF_COPY(cb, 0);
+//     PG_FREE_IF_COPY(keys, 1);
+
+//     // Create a dynamically allocated copy of the result to return
+//     chessboard *resultPtr = (chessboard *)palloc0(sizeof(chessboard));
+//     *resultPtr = result;
+
+//     // Return the pointer to the dynamically allocated copy
+//     PG_RETURN_ChessBoard(resultPtr);
+// }
+
+// bool gin_consistent_internal(bool check[], chessboard cb_query, int32_t nkeys, bool *recheck, chessboard cb_queryKeys[])
+// {
+//   // Assuming FEN string is the query
+//     char *queryFen = cb_query.fen;
+
+//     // Count the number of keys (characters) in the FEN string
+//     int32_t queryLength = strlen(queryFen);
+
+//     // Check if the lengths match
+//     if (queryLength != nkeys) {
+//         // Length mismatch, cannot be consistent
+//         *recheck = false;
+//         return false;
+//     }
+
+//     // Compare each key in the query with the corresponding key in the indexed chessboard
+//     for (int i = 0; i < nkeys; i++) {
+//         // If the key in the query is not present in the indexed chessboard, return false
+//         if (check[i] && queryFen[i] != cb_queryKeys->fen[i]) {
+//             *recheck = false;
+//             return false;
+//         }
+
+//         // If the key in the query is NULL and the indexed chessboard has a regular value, return false
+//         // if (!nullFlags[i] && queryFen[i] == '0') {
+//         //     *recheck = false;
+//         //     return false;
+//         // }
+
+//         // If the key in the query is a NULL value and the indexed chessboard has a regular value, return false
+//         // if (nullFlags[i] && queryFen[i] != '0') {
+//         //     *recheck = false;
+//         //     return false;
+//         // }
+//     }
+
+//     // At this point, the indexed chessboard is consistent with the query
+//     *recheck = true;  // Heap tuple needs to be rechecked
+//     return true;
+// }
+
+// PG_FUNCTION_INFO_V1(gin_consistent);
+// Datum
+// gin_consistent(PG_FUNCTION_ARGS)
+// {
+//    bool *check= (chessboard *) PG_GETARG_POINTER(0);
+//    chessboard *cb_query = (chessboard *) PG_GETARG_POINTER(1);
+//    int32_t keys= PG_GETARG_INT32(2);
+//    bool *recheck= (bool *) PG_GETARG_POINTER(3);
+//    chessboard **cb_querykeys= (chessboard *) PG_GETARG_POINTER(4);
+
+//    // Use getBoard_internal to get the chessboard result
+//    bool result;
+//    result= gin_consistent_internal(check, *cb_query, keys, recheck, cb_querykeys);
+//    PG_FREE_IF_COPY(check, 0);
+//    PG_FREE_IF_COPY(cb_query, 1);
+//    PG_FREE_IF_COPY(keys, 2);
+//    PG_FREE_IF_COPY(recheck, 3);
+//    PG_FREE_IF_COPY(cb_querykeys, 4);
+
+//    // Return bool
+//    PG_RETURN_BOOL(result);
+// }
+
+// PG_FUNCTION_INFO_V1(gin_compare);
+// Datum
+// gin_compare(PG_FUNCTION_ARGS)
+// {
+//   chessboard *cg1 = (chessboard *) PG_GETARG_POINTER(0);
+//   chessboard *cg2 = (chessboard *) PG_GETARG_POINTER(1);
+//   int result; 
+  
+//   if (chessboard_at_less_internal(*cg1, *cg2))
+//       result = -1;
+//   else
+//   {
+//     if (chessboard_at_greater_internal(*cg1, *cg2))
+//       result = 1;
+//     else 
+//       result = 0;
+//   }
+//   PG_FREE_IF_COPY(cg1, 0);
+//   PG_FREE_IF_COPY(cg2, 1);
+//   PG_RETURN_INT32(result);
+// }

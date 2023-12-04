@@ -116,28 +116,107 @@ LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 /* In this first part, we develop an option for the BTree. This option
  * consists on defining following operator: equality (=), inequality (!=), 
- * contains (>) and is contained (<).
+ * contains (@>) and is-contained (<@).
  */
+
+CREATE FUNCTION chessgame_eq(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_eq'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION chessgame_neq(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_neq'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION chessgame_left(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_left'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION chessgame_right(chessgame, chessgame)
+  RETURNS boolean
+  AS 'MODULE_PATHNAME', 'chessgame_right'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
+  RETURNS int
+  AS 'MODULE_PATHNAME', 'chessgame_cmp'
+  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE OPERATOR != (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_eq,
+  COMMUTATOR = !=, NEGATOR = =
+);
+
+CREATE OPERATOR = (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_eq,
+  COMMUTATOR = =, NEGATOR = !=
+);
+
+CREATE OPERATOR @> (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_left,
+  COMMUTATOR = @>
+);
+
+CREATE OPERATOR <@ (
+  LEFTARG = chessgame, RIGHTARG = chessgame,
+  PROCEDURE = chessgame_right,
+  COMMUTATOR = <@
+);
+
+CREATE OPERATOR CLASS chessgame_ops
+    DEFAULT FOR TYPE chessgame USING btree AS
+        OPERATOR        1       @> ,
+        OPERATOR        2       <@ ,
+        OPERATOR        3       = ,
+        OPERATOR        4       != ,
+        FUNCTION        1       chessgame_cmp(chessgame, chessgame);
+
+/* NB: The operator's strategy number is not arbitrary, but follows the following table:
+ * Operation	        Strategy Number
+ *  left of               	1
+ * left of or overlapping 	2
+ * overlapping	            3
+ * right of or overlapping	4
+ * right of	                5
+ * same	                    6 
+ * contains	                7
+ * contained by	            8
+ */
+
+/* In this part, we developed a second version of the BTree. This one 
+ * makes use of the following operators: equality (=), inequality (!=),
+ * greater than (>), less than (<), greater-equal than (>=) and 
+ * less-equal than (<=) */
 
 -- CREATE FUNCTION chessgame_eq(chessgame, chessgame)
 --   RETURNS boolean
 --   AS 'MODULE_PATHNAME', 'chessgame_eq'
 --   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
--- CREATE FUNCTION chessgame_ne(chessgame, chessgame)
+
+-- CREATE FUNCTION chessgame_gt(chessgame, chessgame)
 --   RETURNS boolean
---   AS 'MODULE_PATHNAME', 'chessgame_ne'
+--   AS 'MODULE_PATHNAME', 'chessgame_gt'
 --   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
--- CREATE FUNCTION chessgame_left(chessgame, chessgame)
+
+-- CREATE FUNCTION chessgame_lt(chessgame, chessgame)
 --   RETURNS boolean
---   AS 'MODULE_PATHNAME', 'chessgame_left'
+--   AS 'MODULE_PATHNAME', 'chessgame_lt'
 --   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
--- CREATE FUNCTION chessgame_right(chessgame, chessgame)
+
+-- CREATE FUNCTION chessgame_ge(chessgame, chessgame)
 --   RETURNS boolean
---   AS 'MODULE_PATHNAME', 'chessgame_right'
+--   AS 'MODULE_PATHNAME', 'chessgame_ge'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- CREATE FUNCTION chessgame_le(chessgame, chessgame)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessgame_le'
 --   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
 -- CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
---   RETURNS integer
+--   RETURNS int
 --   AS 'MODULE_PATHNAME', 'chessgame_cmp'
 --   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
@@ -147,102 +226,131 @@ LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 --   COMMUTATOR = =, NEGATOR = !=
 -- );
 
--- CREATE OPERATOR != (
---   LEFTARG = chessgame, RIGHTARG = chessgame,
---   PROCEDURE = chessgame_ne,
---   COMMUTATOR = !=, NEGATOR = =
--- );
-
 -- CREATE OPERATOR > (
 --   LEFTARG = chessgame, RIGHTARG = chessgame,
---   PROCEDURE = chessgame_left,
+--   PROCEDURE = chessgame_gt,
 --   COMMUTATOR = >
 -- );
 
 -- CREATE OPERATOR < (
 --   LEFTARG = chessgame, RIGHTARG = chessgame,
---   PROCEDURE = chessgame_right,
+--   PROCEDURE = chessgame_lt,
 --   COMMUTATOR = <
 -- );
 
--- CREATE OPERATOR CLASS chessgame_ops
+-- CREATE OPERATOR >= (
+--   LEFTARG = chessgame, RIGHTARG = chessgame,
+--   PROCEDURE = chessgame_ge,
+--   COMMUTATOR = >=
+-- );
+
+-- CREATE OPERATOR <= (
+--   LEFTARG = chessgame, RIGHTARG = chessgame,
+--   PROCEDURE = chessgame_le,
+--   COMMUTATOR = <=
+-- );
+
+-- CREATE OPERATOR CLASS chessgame_btree
 --     DEFAULT FOR TYPE chessgame USING btree AS
 --         OPERATOR        1       < ,
---         OPERATOR        2       > ,
+--         OPERATOR        2       <= ,
 --         OPERATOR        3       = ,
---         OPERATOR        4       != ,
+--         OPERATOR        4       > ,
+--         OPERATOR        5       >= ,
 --         FUNCTION        1       chessgame_cmp(chessgame, chessgame);
 
-/* In this part, we developed a second version of the BTree. This one 
- * makes use of the following operators: equality (=), inequality (!=),
- * greater than (>), less than (<), greater-equal than (>=) and 
- * less-equal than (<=) */
+/* NB: The operator's strategy number is not arbitrary, but follows the following table:
+ * Operation	      Strategy Number
+ * less than	            1
+ * less than or equal	    2 
+ * equal	                3
+ * greater than or equal	4
+ * greater than	          5
+ */
 
-CREATE FUNCTION chessgame_eq(chessgame, chessgame)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_eq'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+/* In this last part, we are going to design a GIN index for
+ * the function on the chessgame type to support the 
+ * hasBoard predicate.
+ */ 
 
-CREATE FUNCTION chessgame_gt(chessgame, chessgame)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_gt'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+-- CREATE FUNCTION chessboard_eq(chessboard, chessboard)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessboard_eq'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE FUNCTION chessgame_lt(chessgame, chessgame)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_lt'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+-- CREATE FUNCTION chessboard_at_greater(chessboard, chessboard)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessboard_at_greater'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE FUNCTION chessgame_ge(chessgame, chessgame)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_ge'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+-- CREATE FUNCTION chessboard_at_less(chessboard, chessboard)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessboard_at_less'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE FUNCTION chessgame_le(chessgame, chessgame)
-  RETURNS boolean
-  AS 'MODULE_PATHNAME', 'chessgame_le'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+-- CREATE FUNCTION chessboard_and(chessboard, chessboard)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'chessboard_and'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
-  RETURNS integer
-  AS 'MODULE_PATHNAME', 'chessgame_cmp'
-  LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE OPERATOR = (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_eq,
-  COMMUTATOR = =, NEGATOR = !=
-);
+-- CREATE FUNCTION gin_extractValue(chessboard, int32_t)
+--   RETURNS chessboard
+--   AS 'MODULE_PATHNAME', 'gin_extractValue'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE OPERATOR > (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_gt,
-  COMMUTATOR = >
-);
+-- CREATE FUNCTION gin_consistent (bool, chessboard, int32_t, bool, chessboard)
+--   RETURNS boolean
+--   AS 'MODULE_PATHNAME', 'gin_consistent'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE OPERATOR < (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_lt,
-  COMMUTATOR = <
-);
+-- CREATE FUNCTION gin_compare (chessboard, chessboard);
+--   RETURNS int
+--   AS 'MODULE_PATHNAME', 'gin_compare'
+--   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE OPERATOR >= (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_ge,
-  COMMUTATOR = >=
-);
+-- CREATE OPERATOR =(
+--   LEFTARG = chessboard, RIGHTARG = chessboard,
+--   PROCEDURE = chessboard_eq,
+--   COMMUTATOR = =, NEGATOR = !=
+-- );
 
-CREATE OPERATOR <= (
-  LEFTARG = chessgame, RIGHTARG = chessgame,
-  PROCEDURE = chessgame_le,
-  COMMUTATOR = <=
-);
+-- CREATE OPERATOR && (
+--   LEFTARG = chessboard, RIGHTARG = chessboard,
+--   PROCEDURE = chessboard_and,
+--   COMMUTATOR = &&
+-- );
 
-CREATE OPERATOR CLASS chessgame_ops
-    DEFAULT FOR TYPE chessgame USING btree AS
-        OPERATOR        1       < ,
-        OPERATOR        2       > ,
-        OPERATOR        3       = ,
-        OPERATOR        4       <= ,
-        OPERATOR        5       >= ,
-        FUNCTION        1       chessgame_cmp(chessgame, chessgame);
+-- CREATE OPERATOR @> (
+--   LEFTARG = chessboard, RIGHTARG = chessboard,
+--   PROCEDURE = chessboard_at_greater,
+--   COMMUTATOR = @>
+-- );
+
+-- CREATE OPERATOR <@ (
+--   LEFTARG = chessboard, RIGHTARG = chessboard,
+--   PROCEDURE = chessboard_at_less,
+--   COMMUTATOR = <@
+-- );
+
+-- CREATE OPERATOR CLASS gin_ops
+--     DEFAULT FOR TYPE chessboard USING gin AS
+--         OPERATOR        3       && ,
+--         OPERATOR        6       = ,
+--         OPERATOR        7       @> ,
+--         OPERATOR        8       <@ ,
+--         FUNCTION        1       gin_extractValue (chessboard, int32_t),
+--         FUNCTION        2       gin_consistent (bool, chessboard, int32_t, bool, chessboard),
+--         FUNCTION        3       gin_compare (chessboard, chessboard);
+
+/* NB: The operator's strategy number is not arbitrary, but follows the following table:
+ * Operation	        Strategy Number
+ *  left of               	1
+ * left of or overlapping 	2
+ * overlapping	            3
+ * right of or overlapping	4
+ * right of	                5
+ * same	                    6 
+ * contains	                7
+ * contained by	            8
+ */
