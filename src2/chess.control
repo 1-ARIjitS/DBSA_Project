@@ -1,0 +1,6 @@
+# Chess extension
+comment = 'Chess - data types and functions for chess games and boards'
+default_version = '1.0'
+module_pathname = '$libdir/chess'
+relocatable = true
+
