@@ -243,6 +243,8 @@ CREATE OPERATOR CLASS chessgame_ops
         FUNCTION        1       chessgame_cmp(chessgame, chessgame);
 
 CREATE FUNCTION hasOpening(chessgame1 chessgame, chessgame2 chessgame)
-RETURNS boolean
-AS 'MODULE_PATHNAME', 'chessgame_cmp'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+RETURNS boolean AS $$
+BEGIN
+    RETURN chessgame_cmp(chessgame1, chessgame2) = 0;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
