@@ -247,9 +247,8 @@ CREATE OPERATOR CLASS chessgame_ops
         OPERATOR        5       >= ,
         FUNCTION        1       chessgame_cmp(chessgame, chessgame);
 
+
 CREATE FUNCTION hasOpening(chessgame1 chessgame, chessgame2 chessgame)
 RETURNS boolean AS $$
-BEGIN
-    RETURN (chessgame1 >= chessgame2 AND chessgame1 < chessgame_add(chessgame2));
-END;
-$$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
+SELECT (chessgame1 >= chessgame2 AND chessgame1 < chessgame_add(chessgame2));
+$$ LANGUAGE sql IMMUTABLE;
