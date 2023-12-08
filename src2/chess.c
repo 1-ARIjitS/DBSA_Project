@@ -22,16 +22,6 @@
 
 PG_MODULE_MAGIC;
 
-#define EPSILON         1.0E-06
-
-#define FPzero(A)       (fabs(A) <= EPSILON)
-#define FPeq(A,B)       (fabs((A) - (B)) <= EPSILON)
-#define FPne(A,B)       (fabs((A) - (B)) > EPSILON)
-#define FPlt(A,B)       ((B) - (A) > EPSILON)
-#define FPle(A,B)       ((A) - (B) <= EPSILON)
-#define FPgt(A,B)       ((A) - (B) > EPSILON)
-#define FPge(A,B)       ((B) - (A) <= EPSILON)
-
 /*****************************************************************************/
 // 1.
 
@@ -152,32 +142,6 @@ chessboard_out(PG_FUNCTION_ARGS)
     PG_FREE_IF_COPY(board, 0);
     PG_RETURN_CSTRING(result);
 }
-
-
-//PG_FUNCTION_INFO_V1(chessgame_recv);
-//Datum
-//chessgame_recv(PG_FUNCTION_ARGS)
-//{
-    //StringInfo buf = (StringInfo) PG_GETARG_POINTER(0);
-    // Read the text string from the buffer
-    //chessgame *game = palloc(sizeof(chessgame));
-    //game->san = pq_getmsgstring(buf);
-    //PG_RETURN_POINTER(game);
-//}
-
-
-
-//PG_FUNCTION_INFO_V1(chessgame_send);
-//Datum
-//chessgame_send(PG_FUNCTION_ARGS)
-//{
-    //chessgame *game = (chessgame *) PG_GETARG_POINTER(0);
-    //StringInfoData buf;
-    //pq_begintypsend(&buf);
-    //pq_sendtext(&buf, game->san);
-    //PG_FREE_IF_COPY(game, 0);
-    //PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
-//}
 
 
 /*****************************************************************************/
@@ -497,12 +461,6 @@ hasBoard(PG_FUNCTION_ARGS)
  * contains (>) and is contained (<).
  */
 
-static bool
-chessgame_eq_internal(chessgame *g1, chessgame *g2)
-{
-     return strcmp(g1->san, g2->san) == 0;
-}
-
 PG_FUNCTION_INFO_V1(chessgame_eq);
 Datum
 chessgame_eq(PG_FUNCTION_ARGS)
@@ -510,25 +468,13 @@ chessgame_eq(PG_FUNCTION_ARGS)
      chessgame *g1 = (chessgame *) PG_GETARG_POINTER(0);
      chessgame *g2 = (chessgame *) PG_GETARG_POINTER(1);
 
-     bool result = chessgame_eq_internal(g1, g2);
+     bool result = strcmp(g1->san, g2->san) == 0;
      PG_FREE_IF_COPY(g1, 0);
      PG_FREE_IF_COPY(g2, 1);
      PG_RETURN_BOOL(result);
 }
 
-PG_FUNCTION_INFO_V1(chessgame_ne);
-Datum
-chessgame_ne(PG_FUNCTION_ARGS)
-{
-     chessgame *g1 = (chessgame *) PG_GETARG_POINTER(0);
-     chessgame *g2 = (chessgame *) PG_GETARG_POINTER(1);
-     bool result = !chessgame_eq_internal(g1, g2);
-     PG_FREE_IF_COPY(g1, 0);
-     PG_FREE_IF_COPY(g2, 1);
-     PG_RETURN_BOOL(result);
-}
-
-// /* This function answers to the operation contains (a > b, a constains b) */
+// /* This function answers to the operation contains (a > b) */
 
 PG_FUNCTION_INFO_V1(chessgame_gt);
 Datum
@@ -606,7 +552,7 @@ chessgame_cmp(PG_FUNCTION_ARGS)
 {
     chessgame *cg1 = (chessgame *) PG_GETARG_POINTER(0);
     chessgame *cg2 = (chessgame *) PG_GETARG_POINTER(1);
-    bool result;
+    int result;
 
     // Compare only the length of the second game's moves
     result = strcmp(cg1->san, cg2->san);

@@ -109,65 +109,6 @@ LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
  * Indexes
  ******************************************************************************/
 
-/* In this first part, we develop an option for the BTree. This option
- * consists on defining following operator: equality (=), inequality (!=), 
- * contains (>) and is contained (<).
- */
-
--- CREATE FUNCTION chessgame_eq(chessgame, chessgame)
---   RETURNS boolean
---   AS 'MODULE_PATHNAME', 'chessgame_eq'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
--- CREATE FUNCTION chessgame_ne(chessgame, chessgame)
---   RETURNS boolean
---   AS 'MODULE_PATHNAME', 'chessgame_ne'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
--- CREATE FUNCTION chessgame_left(chessgame, chessgame)
---   RETURNS boolean
---   AS 'MODULE_PATHNAME', 'chessgame_left'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
--- CREATE FUNCTION chessgame_right(chessgame, chessgame)
---   RETURNS boolean
---   AS 'MODULE_PATHNAME', 'chessgame_right'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
--- CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
---   RETURNS integer
---   AS 'MODULE_PATHNAME', 'chessgame_cmp'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
--- CREATE OPERATOR = (
---   LEFTARG = chessgame, RIGHTARG = chessgame,
---   PROCEDURE = chessgame_eq,
---   COMMUTATOR = =, NEGATOR = !=
--- );
-
--- CREATE OPERATOR != (
---   LEFTARG = chessgame, RIGHTARG = chessgame,
---   PROCEDURE = chessgame_ne,
---   COMMUTATOR = !=, NEGATOR = =
--- );
-
--- CREATE OPERATOR > (
---   LEFTARG = chessgame, RIGHTARG = chessgame,
---   PROCEDURE = chessgame_left,
---   COMMUTATOR = >
--- );
-
--- CREATE OPERATOR < (
---   LEFTARG = chessgame, RIGHTARG = chessgame,
---   PROCEDURE = chessgame_right,
---   COMMUTATOR = <
--- );
-
--- CREATE OPERATOR CLASS chessgame_ops
---     DEFAULT FOR TYPE chessgame USING btree AS
---         OPERATOR        1       < ,
---         OPERATOR        2       > ,
---         OPERATOR        3       = ,
---         OPERATOR        4       != ,
---         FUNCTION        1       chessgame_cmp(chessgame, chessgame);
-
 /* In this part, we developed a second version of the BTree. This one 
  * makes use of the following operators: equality (=), inequality (!=),
  * greater than (>), less than (<), greater-equal than (>=) and 
@@ -240,15 +181,15 @@ CREATE OPERATOR <= (
 
 CREATE OPERATOR CLASS chessgame_ops
     DEFAULT FOR TYPE chessgame USING btree AS
-        OPERATOR        1       < ,
-        OPERATOR        2       > ,
-        OPERATOR        3       = ,
-        OPERATOR        4       <= ,
-        OPERATOR        5       >= ,
+        OPERATOR        1       <,
+        OPERATOR        2       <=,
+        OPERATOR        3       =,
+        OPERATOR        4       >=,
+        OPERATOR        5       >,
         FUNCTION        1       chessgame_cmp(chessgame, chessgame);
 
 
 CREATE FUNCTION hasOpening(chessgame1 chessgame, chessgame2 chessgame)
 RETURNS boolean AS $$
 SELECT (chessgame1 >= chessgame2 AND chessgame1 < chessgame_add(chessgame2));
-$$ LANGUAGE sql IMMUTABLE;
+$$ LANGUAGE sql STABLE;
