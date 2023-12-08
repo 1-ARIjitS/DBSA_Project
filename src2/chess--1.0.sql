@@ -203,6 +203,11 @@ CREATE FUNCTION chessgame_cmp(chessgame, chessgame)
   AS 'MODULE_PATHNAME', 'chessgame_cmp'
   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION chessgame_add(chessgame)
+RETURNS chessgame
+AS 'MODULE_PATHNAME', 'chessgame_add'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 CREATE OPERATOR = (
   LEFTARG = chessgame, RIGHTARG = chessgame,
   PROCEDURE = chessgame_eq,
@@ -245,6 +250,6 @@ CREATE OPERATOR CLASS chessgame_ops
 CREATE FUNCTION hasOpening(chessgame1 chessgame, chessgame2 chessgame)
 RETURNS boolean AS $$
 BEGIN
-    RETURN chessgame_cmp(chessgame1, chessgame2) = 0;
+    RETURN (chessgame1 >= chessgame2 AND chessgame1 < chessgame_add(chessgame2));
 END;
 $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;

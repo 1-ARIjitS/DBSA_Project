@@ -509,6 +509,7 @@ chessgame_eq(PG_FUNCTION_ARGS)
 {
      chessgame *g1 = (chessgame *) PG_GETARG_POINTER(0);
      chessgame *g2 = (chessgame *) PG_GETARG_POINTER(1);
+
      bool result = chessgame_eq_internal(g1, g2);
      PG_FREE_IF_COPY(g1, 0);
      PG_FREE_IF_COPY(g2, 1);
@@ -608,10 +609,31 @@ chessgame_cmp(PG_FUNCTION_ARGS)
     bool result;
 
     // Compare only the length of the second game's moves
-    int n = strlen(cg2->san);
-    result = strncmp(cg1->san, cg2->san, n);
+    result = strcmp(cg1->san, cg2->san);
 
     PG_FREE_IF_COPY(cg1, 0);
     PG_FREE_IF_COPY(cg2, 1);
     PG_RETURN_INT32(result);
+}
+
+PG_FUNCTION_INFO_V1(chessgame_add);
+Datum
+chessgame_add(PG_FUNCTION_ARGS)
+{
+    chessgame *original_cg = (chessgame *) PG_GETARG_POINTER(0);
+    
+    // Create a new chessgame with the same san value as the original
+    chessgame *new_cg = chessgame_make(original_cg->san);
+
+    // Find the length of the san string in the new chessgame
+    int len = strlen(new_cg->san);
+
+    // Only modify the last character if the string is not empty
+    if (len > 0) {
+        // Increase the ASCII value of the last character by 1
+        new_cg->san[len - 1] += 1;
+    }
+
+    // Return the new modified chessgame
+    PG_RETURN_POINTER(new_cg);
 }
