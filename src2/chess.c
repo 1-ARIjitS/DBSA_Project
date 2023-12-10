@@ -544,16 +544,10 @@ chessboard* truncate_fen(chessboard cb)
     cb_truncated->fen[i]= '\0';
   }
   token = strtok(cb.fen, " ");
-  
-  // for(int i=0; token[i]!='\0'; i++)
-  // {
-  //   // printf("%c\n", token[i]);
-  //   cb_truncated.fen[i]= token[i];
-  // }
+
   strcpy(cb_truncated->fen, token);
   ereport(WARNING, errmsg_internal("cb_truncated = %s\n", cb_truncated->fen));
-  // strcat(cb_truncated.fen, "\0");
-  // free(token);
+
   ereport(WARNING, errmsg_internal("done"));
   return cb_truncated;
 }
@@ -570,8 +564,6 @@ calc_half_moves(chessgame cg)
   // calculating the total number of half moves
   num_half_moves= SCL_recordLength(r);
 
-  // printing the number of half moves
-  printf("number of half moves in the PGN notation= %d\n", num_half_moves);
   return num_half_moves;
 }
 
@@ -581,8 +573,6 @@ at_operator_internal(chessgame cg, chessboard cb)
   int num_half_moves= calc_half_moves(cg);
   bool result= false;
   chessboard cb_truncated;
-  // chessboard board_state;
-  // chessboard truncate_board_state;
   printf("@ num of half moves= %d\n", num_half_moves);
   printf("@ san= %s\n", cg.san);
   printf("@ fen= %s\n", cb.fen);
@@ -626,29 +616,16 @@ PG_FUNCTION_INFO_V1(gin_extractValue);
 Datum
 gin_extractValue(PG_FUNCTION_ARGS)
 {
-    ereport(WARNING, errmsg_internal("%d",1));
     chessgame *cg = PG_GETARG_ChessGame(0);
-    ereport(WARNING, errmsg_internal("%d",2));
     int32 *nkeys = (int32 *)PG_GETARG_POINTER(1);
-    ereport(WARNING, errmsg_internal("%d",3));
-    // bool **nullFlags = (bool **) PG_GETARG_POINTER(2);
+    bool **nullFlags = (bool **) PG_GETARG_POINTER(2);
     int num_half_moves = calc_half_moves(*cg);
-    // *nullFlags = NULL;
+    *nullFlags = NULL;
     elog(WARNING, "this is the gin_extractValue\n");
     ereport(WARNING, errmsg_internal("%d\n", num_half_moves));
-    // printf("@the number of half moves= %d\n", num_half_moves);
-    // printf("@size of board_states array= %d\n", (*nkeys) * sizeof(chessboard));
     int total_half_moves= num_half_moves+1;
-    // Use getBoard_internal to get the chessboard result
     int count=1;
-    Datum *board_states = (Datum*) palloc((total_half_moves) * sizeof(Datum));
-    // for (int i = 0; i < total_half_moves; i++)
-    // {
-    //   for(int j=0;j<SCL_FEN_MAX_LENGTH;j++)
-    //   {
-    //     board_states[i].fen[j] = '\0';
-    //   }
-    // }
+    Datum *board_states = (Datum *) palloc((total_half_moves) * sizeof(Datum));
     for(int i = 0; i < total_half_moves; i++)
     { 
       ereport(WARNING, errmsg_internal("run= %d\n", count));
@@ -658,9 +635,7 @@ gin_extractValue(PG_FUNCTION_ARGS)
       ereport(WARNING, errmsg_internal("board extracted"));
       truncate_board_state= truncate_fen(state);
       ereport(WARNING, errmsg_internal("truncated_fen= %s\n",truncate_board_state->fen));
-      // strcpy(board_states[i].fen, truncate_board_state.fen);
       board_states[i]= truncate_board_state;
-      // printf("board_state %d = %s\n", i, board_states[i].fen);
       ereport(WARNING, errmsg_internal("board_state assigned properly"));
       count+=1;
     }
@@ -683,21 +658,16 @@ gin_extractQuery(PG_FUNCTION_ARGS)
     bool **nullFlags = (bool **) PG_GETARG_POINTER(5);
     int32 *searchMode = (int32 *) PG_GETARG_POINTER(6);
     *searchMode = GIN_SEARCH_MODE_DEFAULT;
-    elog(WARNING, "this is gin_extractQuery\n");
     *nkeys= 1;
     Datum *keys = (Datum*)palloc(*nkeys * sizeof(Datum));
-    chessboard cb_res;
+    chessboard *cb_res=(chessboard *) palloc(*nkeys * sizeof(chessboard));
     for(int i=0; i<SCL_FEN_MAX_LENGTH; i++)
     {
-      cb_res.fen[i]='\0';
+      cb_res->fen[i]='\0';
     }
-    elog(WARNING, "this is gin_extractQuery middle\n");
-    for (int i = 0; i < *nkeys; i++)
-    {
-        strcpy(cb_res.fen, cb_query->fen);
-        keys[i] = ChessBoardPGetDatum(cb_res.fen);
-    }
-     elog(WARNING, "this is gin_extractQuery done\n");
+    strcpy(cb_res->fen, cb_query->fen);
+    keys[0] = cb_res;
+    elog(WARNING, "this is gin_extractQuery done\n");
     *nullFlags = NULL;
     PG_FREE_IF_COPY(cb_query, 0);
     PG_RETURN_POINTER(keys);
@@ -706,8 +676,8 @@ gin_extractQuery(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(gin_consistent);
 Datum
 gin_consistent(PG_FUNCTION_ARGS)
-{  
-    elog(WARNING, "this is the gin_consistent strat\n");
+{
+    elog(WARNING, "this is the gin_consistent start\n");
     bool result=true;
     PG_RETURN_BOOL(result);
     elog(WARNING, "this is the gin_consistent end\n");
@@ -717,7 +687,6 @@ int gin_compare_internal(chessboard cb1, chessboard cb2)
 {
   elog(WARNING, "this is the gin_compare_internal\n");
   int res= strcmp(truncate_fen(cb1)->fen, truncate_fen(cb2)->fen);
-  ereport(WARNING, errmsg_internal("cb_truncated = %d\n", res));
   if(res > 0)
   {
     res=1;
@@ -730,6 +699,7 @@ int gin_compare_internal(chessboard cb1, chessboard cb2)
   {
     res=0;
   }
+  ereport(WARNING, errmsg_internal("cb_truncated compare value = %d\n", res));
   return res;
 }
 
@@ -740,10 +710,9 @@ gin_compare(PG_FUNCTION_ARGS)
     elog(WARNING, "this is the gin_compare start\n");
     chessboard *cb1 = PG_GETARG_ChessBoard(0);
     chessboard *cb2 = PG_GETARG_ChessBoard(1);
-   
     elog(WARNING, "this is the gin_compare\n");
-    ereport(WARNING, errmsg_internal("cb_truncated = %s\n", cb1->fen));
-    ereport(WARNING, errmsg_internal("cb_truncated = %s\n", cb2->fen));
+    ereport(WARNING, errmsg_internal("cb1 value in compare= %s\n", cb1->fen));
+    ereport(WARNING, errmsg_internal("cb2 value in compare= %s\n", cb2->fen));
     int32_t result = gin_compare_internal(*cb1, *cb2);
     PG_FREE_IF_COPY(cb1, 0);
     PG_FREE_IF_COPY(cb2, 1);

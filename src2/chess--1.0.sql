@@ -164,7 +164,7 @@ $$ LANGUAGE sql STABLE;
 /* In this part, we develop an implementation for the GIN index. 
  */
 
- CREATE FUNCTION gin_extractValue(chessgame, internal)
+CREATE FUNCTION gin_extractValue(chessgame, internal)
 RETURNS internal
 AS 'MODULE_PATHNAME', 'gin_extractValue'
 LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -208,4 +208,4 @@ CREATE OPERATOR CLASS gin_ops
 CREATE FUNCTION hasBoard(cg chessgame, cb chessboard, moves integer)
 RETURNS boolean AS $$
 SELECT ((cg @ cb) AND (getFirstMoves(cg,moves) @ cb));
-$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+$$ LANGUAGE sql STABLE;
