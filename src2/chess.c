@@ -14,16 +14,33 @@
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 #include "utils/builtins.h"
 #include "libpq/pqformat.h"
+#include "access/skey.h" 
+#include "fmgr.h"
+#include "catalog/pg_collation.h"
+#include "catalog/pg_proc.h"
+#include "catalog/pg_type.h"
+#include "access/gin.h"
+#include "access/skey.h"
+#include "utils/fmgroids.h"
+#include "utils/builtins.h"
+#include "utils/numeric.h"
+#include "utils/timestamp.h"
+#include "utils/array.h"
+#include "utils/lsyscache.h"
+#include "utils/formatting.h"
+#include "utils/fmgroids.h"
+#include "smallchesslib.h"
 
 #include "smallchesslib.h"
 
 PG_MODULE_MAGIC;
 
 /*****************************************************************************/
-// 1.
+// 1. Type defining
 
 /* Structure to represent the chessgame */
 typedef struct chessgame
@@ -49,7 +66,7 @@ typedef struct chessboard
 
 
 /*****************************************************************************/
-// 2. 
+// 2. Datatype make functions
 
 static chessgame *
 chessgame_make(const char *san)
@@ -74,9 +91,8 @@ chessboard_make(const char *fen)
 }
 
 /*****************************************************************************/
-// 3. parse functions
-
-// This function needs to check for illegal args. 
+// 3. Parse functions
+ 
 static chessgame *
 chessgame_parse(char **str)
 {
@@ -105,7 +121,7 @@ chessboard_to_str(const chessboard *board)
 
 
 /*****************************************************************************/
-// 4. _in, _out, _recv, _send, _cast_from_text, _cast_to_text (I removed send and recv)
+// 4. _in, _out, _recv, _send, _cast_from_text, _cast_to_text functions
 
 PG_FUNCTION_INFO_V1(chessgame_in);
 Datum
@@ -166,12 +182,12 @@ chessboard_constructor(PG_FUNCTION_ARGS)
 /*****************************************************************************/
 // Help functions
 
+char str[4096];
+
 void putCharacter(char c)
 {
   putchar(c);
 }
-
-char str[4096];
 
 void putCharStr(char c)
 {
@@ -216,6 +232,8 @@ int strEquals(const char *s1, const char *s2)
 }
 
 
+/*****************************************************************************/
+// Functions specified in the assignment
 
 // Function 1: getBoard -> chessboard: Get FEN notation of the board after the given number of moves 
 chessboard getBoard_internal(chessgame cg, int moves)
@@ -226,24 +244,17 @@ chessboard getBoard_internal(chessgame cg, int moves)
   SCL_recordInit(r);
   SCL_recordFromPGN(r, cg.san);
 
-  // calculating the total number of half moves
+  // Calculating the total number of half moves
   num_half_moves= SCL_recordLength(r);
 
-  // printing the number of half moves
-  printf("number of half moves in the PGN notation= %d\n", num_half_moves);
-
-  // initializing a board to store the represent and make moves using the PGN (SAN) notation
+  // Initializing a board to store the represent and make moves using the PGN (SAN) notation
   SCL_Board b;
   SCL_boardInit(b);
 
-  // printing the passed PGN (SAN) notation
-  SCL_printPGN(r, putCharacter, b);
-  printf("\n");
-
-  // initializing the retrun type
+  // Initializing the retrun type
   chessboard cb;
 
-  // initializing a game to play the chess game
+  // Initializing a game to play the chess game
   SCL_Game g;
   for(int i=0; i<SCL_BOARD_STATE_SIZE; i++)
   {
@@ -260,12 +271,8 @@ chessboard getBoard_internal(chessgame cg, int moves)
 
   if(moves <= num_half_moves)
   {
-    // applying a fixed number of half moves to the chess game as passed in the argument
+    // Applying a fixed number of half moves to the chess game as passed in the argument
     SCL_recordApply(r, b, moves);
-
-    // printing the board after applying the record
-    SCL_printBoardSimple(b, putCharacter, 1, SCL_PRINT_FORMAT_UTF8);
-    printf("\n");
 
     // converting the board state to FEN notation
     char fen_string[SCL_FEN_MAX_LENGTH];
@@ -281,14 +288,11 @@ chessboard getBoard_internal(chessgame cg, int moves)
       printf("ERROR: Input SAN string exceeds the maximum length of allowed FEN string");
     }
 
-    // have to figure out what does this number mean
-    printf("status= %d\n", status);
-
-    // initializing a new board to verify the results
+    // Initializing a new board to verify the results
     SCL_Board b2;
     SCL_boardInit(b2);
 
-    // verifying the FEN notation using the new board
+    // Verifying the FEN notation using the new board
     SCL_boardFromFEN(b2, fen_string);
     SCL_printBoardSimple(b2, putCharacter, 1, SCL_PRINT_FORMAT_UTF8);
   }
@@ -297,7 +301,7 @@ chessboard getBoard_internal(chessgame cg, int moves)
     print("ERROR: Number of moves passed is greater than the number of half moves in the PGN");
   }
 
-  // returning the result
+  // Returning the result
   return cb;
 }
 
@@ -335,19 +339,11 @@ chessgame getFirstMoves_internal(chessgame cg, int moves)
   // calculating the total number of half moves
   int num_half_moves= SCL_recordLength(r);
 
-  // printing the number of half moves
-  printf("number of half moves in the PGN notation= %d\n", num_half_moves);
-
-  // initializing a board to store the represent and make moves using the PGN (SAN) notation
+  // Initializing a board to store the represent and make moves using the PGN (SAN) notation
   SCL_Board b;
   SCL_boardInit(b);
 
-  // printing the passed PGN (SAN) notation
-  printf("Original PGN notation:\n");
-  SCL_printPGN(r, putCharacter, b);
-  printf("\n");
-
-  // splitting the string using strtok
+  // Splitting the string using strtok
   if(num_half_moves >= moves)
   {
     char *token= strtok(cg.san, " ");
@@ -356,14 +352,11 @@ chessgame getFirstMoves_internal(chessgame cg, int moves)
     while( token != NULL ) 
     {
       token_counter++;
-      // printf( " %s\n", token ); //printing each token
-      // printf("%d ", token_counter);
       strcat(san_str_truncated, token);
       strcat(san_str_truncated, " ");
       if(token_counter==2 || token_counter==3)
       {
         half_move_counter++;
-        // printf( " %s\n", token ); //printing each token
       }
       if(half_move_counter==moves)
       {
@@ -380,10 +373,9 @@ chessgame getFirstMoves_internal(chessgame cg, int moves)
     int ele_count=0;
     for(int i=0;san_str_truncated[i]!='\0';i++)
     {
-      // printf("%c",san_str_truncated[i]);
       ele_count+=1;
     }
-    // initialize the character array i.e. string
+    // Initialize the character array i.e. string
     for(int i=0;i<SCL_RECORD_MAX_SIZE;i++)
     {
       cg_truncated.san[i]='\0';
@@ -422,42 +414,10 @@ getFirstMoves(PG_FUNCTION_ARGS)
     PG_RETURN_ChessBoard(resultPtr);
 }
 
-
-// Function 4: hasBoard -> bool: To check if the given chessgame has the given board state in the given half moves 
-bool hasBoard_internal(chessgame cg, chessboard cb, int moves)
-{
-  chessboard cb_heuristic;
-  for(int i=0; i<=moves; i++)
-  {
-    cb_heuristic= getBoard_internal(cg, i);
-    if(strEquals(cb_heuristic.fen, cb.fen))
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
-PG_FUNCTION_INFO_V1(hasBoard);
-Datum 
-hasBoard(PG_FUNCTION_ARGS)
-{
-    chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
-    chessboard *cb = (chessboard *) PG_GETARG_POINTER(0);
-    int moves = PG_GETARG_INT32(1);
-
-    // Use hasOpening_internal to get the bool result
-    bool result = hasBoard_internal(*cg, *cb, moves);
-    PG_FREE_IF_COPY(cg, 0);
-    PG_FREE_IF_COPY(cb, 1); 
-    PG_FREE_IF_COPY(moves, 2);
-    PG_RETURN_BOOL(result);
-}
-
 /*****************************************************************************/
 
-/* In this first part, we develop an option for the BTree. This option
- * consists on defining following operator: equality (=), inequality (!=), 
+/* In this part, we develop an implementation for the BTree. This implementation
+ * consists of defining the following operators: equality (=), inequality (!=), 
  * contains (>) and is contained (<).
  */
 
@@ -475,7 +435,6 @@ chessgame_eq(PG_FUNCTION_ARGS)
 }
 
 // /* This function answers to the operation contains (a > b) */
-
 PG_FUNCTION_INFO_V1(chessgame_gt);
 Datum
 chessgame_gt(PG_FUNCTION_ARGS)
@@ -491,8 +450,7 @@ chessgame_gt(PG_FUNCTION_ARGS)
      PG_RETURN_BOOL(result);
 }
 
-// /* This function answers to the operation contains (a >= b, a constains b) */
-
+// /* This function answers to the operation contains (a >= b) */
 PG_FUNCTION_INFO_V1(chessgame_ge);
 Datum
 chessgame_ge(PG_FUNCTION_ARGS)
@@ -508,9 +466,7 @@ chessgame_ge(PG_FUNCTION_ARGS)
      PG_RETURN_BOOL(result);
 }
 
-// /* This function answers to the operation constained in (a < b, a is contained in b) */
-
-
+// /* This function answers to the operation constained in (a < b) */
 PG_FUNCTION_INFO_V1(chessgame_lt);
 Datum
 chessgame_lt(PG_FUNCTION_ARGS)
@@ -526,9 +482,7 @@ chessgame_lt(PG_FUNCTION_ARGS)
      PG_RETURN_BOOL(result);
 }
 
-// /* This function answers to the operation constained in (a < b, a is contained in b) */
-
-
+// /* This function answers to the operation constained in (a < b) */
 PG_FUNCTION_INFO_V1(chessgame_le);
 Datum
 chessgame_le(PG_FUNCTION_ARGS)
@@ -544,8 +498,7 @@ chessgame_le(PG_FUNCTION_ARGS)
      PG_RETURN_BOOL(result);
 }
 
-// /* cmp function for the B-Tree */
-  
+// /* Cmp function for the B-Tree */
 PG_FUNCTION_INFO_V1(chessgame_cmp);
 Datum
 chessgame_cmp(PG_FUNCTION_ARGS)
@@ -554,7 +507,6 @@ chessgame_cmp(PG_FUNCTION_ARGS)
     chessgame *cg2 = (chessgame *) PG_GETARG_POINTER(1);
     int result;
 
-    // Compare only the length of the second game's moves
     result = strcmp(cg1->san, cg2->san);
 
     PG_FREE_IF_COPY(cg1, 0);
@@ -567,19 +519,233 @@ Datum
 chessgame_add(PG_FUNCTION_ARGS)
 {
     chessgame *original_cg = (chessgame *) PG_GETARG_POINTER(0);
-    
-    // Create a new chessgame with the same san value as the original
     chessgame *new_cg = chessgame_make(original_cg->san);
 
-    // Find the length of the san string in the new chessgame
     int len = strlen(new_cg->san);
 
-    // Only modify the last character if the string is not empty
     if (len > 0) {
         // Increase the ASCII value of the last character by 1
         new_cg->san[len - 1] += 1;
     }
 
-    // Return the new modified chessgame
     PG_RETURN_POINTER(new_cg);
+}
+
+/*****************************************************************************/
+/* In this part, we develop an implementation for the GIN index. 
+ */
+// Function 4: hasBoard -> bool: To check if the given chessgame has the given board state in the given half moves 
+chessboard* truncate_fen(chessboard cb)
+{
+  char *token;
+  chessboard *cb_truncated=(chessboard *)palloc(sizeof(chessboard));
+  for(int i=0; i<SCL_FEN_MAX_LENGTH; i++)
+  {
+    cb_truncated->fen[i]= '\0';
+  }
+  token = strtok(cb.fen, " ");
+  
+  // for(int i=0; token[i]!='\0'; i++)
+  // {
+  //   // printf("%c\n", token[i]);
+  //   cb_truncated.fen[i]= token[i];
+  // }
+  strcpy(cb_truncated->fen, token);
+  ereport(WARNING, errmsg_internal("cb_truncated = %s\n", cb_truncated->fen));
+  // strcat(cb_truncated.fen, "\0");
+  // free(token);
+  ereport(WARNING, errmsg_internal("done"));
+  return cb_truncated;
+}
+
+static int
+calc_half_moves(chessgame cg)
+{
+  // Initializing record for storing the PGN (SAN) string
+  int num_half_moves;
+  SCL_Record r;
+  SCL_recordInit(r);
+  SCL_recordFromPGN(r, cg.san);
+
+  // calculating the total number of half moves
+  num_half_moves= SCL_recordLength(r);
+
+  // printing the number of half moves
+  printf("number of half moves in the PGN notation= %d\n", num_half_moves);
+  return num_half_moves;
+}
+
+static bool
+at_operator_internal(chessgame cg, chessboard cb)
+{
+  int num_half_moves= calc_half_moves(cg);
+  bool result= false;
+  chessboard cb_truncated;
+  // chessboard board_state;
+  // chessboard truncate_board_state;
+  printf("@ num of half moves= %d\n", num_half_moves);
+  printf("@ san= %s\n", cg.san);
+  printf("@ fen= %s\n", cb.fen);
+  cb_truncated= *truncate_fen(cb);
+  printf("@ fen truncated= %s\n", cb_truncated.fen);
+  int run=0;
+  for(int i=0;i<=num_half_moves;i++)
+  {
+    chessboard board_state;
+    chessboard truncate_board_state;
+    board_state= getBoard_internal(cg, i);
+    truncate_board_state= *truncate_fen(board_state);
+    printf("@ run= %d\n", run);
+    printf("@ board state fen= %s\n",board_state.fen);
+    printf("@ san to truncated fen= %s\n", truncate_board_state.fen);
+    if( strcmp( cb_truncated.fen, truncate_board_state.fen ) == 0 )
+    {
+      result=true;
+      printf("@ result= %d\nGOT THE FEN BREAK\n", result);
+      break;
+    }
+    run+=1;
+    printf("@ result= %d\n", result);
+  }
+  return result;
+}
+
+PG_FUNCTION_INFO_V1(chessboard_at_op);
+Datum
+chessboard_at_op(PG_FUNCTION_ARGS)
+{
+    chessgame *cg = (chessgame *) PG_GETARG_POINTER(0);
+    chessboard *cb = (chessboard *) PG_GETARG_POINTER(1);
+    bool result = at_operator_internal(*cg, *cb);
+    PG_FREE_IF_COPY(cg, 0);
+    PG_FREE_IF_COPY(cb, 1);
+    PG_RETURN_BOOL(result);
+}
+
+PG_FUNCTION_INFO_V1(gin_extractValue);
+Datum
+gin_extractValue(PG_FUNCTION_ARGS)
+{
+    ereport(WARNING, errmsg_internal("%d",1));
+    chessgame *cg = PG_GETARG_ChessGame(0);
+    ereport(WARNING, errmsg_internal("%d",2));
+    int32 *nkeys = (int32 *)PG_GETARG_POINTER(1);
+    ereport(WARNING, errmsg_internal("%d",3));
+    // bool **nullFlags = (bool **) PG_GETARG_POINTER(2);
+    int num_half_moves = calc_half_moves(*cg);
+    // *nullFlags = NULL;
+    elog(WARNING, "this is the gin_extractValue\n");
+    ereport(WARNING, errmsg_internal("%d\n", num_half_moves));
+    // printf("@the number of half moves= %d\n", num_half_moves);
+    // printf("@size of board_states array= %d\n", (*nkeys) * sizeof(chessboard));
+    int total_half_moves= num_half_moves+1;
+    // Use getBoard_internal to get the chessboard result
+    int count=1;
+    Datum *board_states = (Datum*) palloc((total_half_moves) * sizeof(Datum));
+    // for (int i = 0; i < total_half_moves; i++)
+    // {
+    //   for(int j=0;j<SCL_FEN_MAX_LENGTH;j++)
+    //   {
+    //     board_states[i].fen[j] = '\0';
+    //   }
+    // }
+    for(int i = 0; i < total_half_moves; i++)
+    { 
+      ereport(WARNING, errmsg_internal("run= %d\n", count));
+      chessboard state;
+      chessboard *truncate_board_state;
+      state= getBoard_internal(*cg, i);
+      ereport(WARNING, errmsg_internal("board extracted"));
+      truncate_board_state= truncate_fen(state);
+      ereport(WARNING, errmsg_internal("truncated_fen= %s\n",truncate_board_state->fen));
+      // strcpy(board_states[i].fen, truncate_board_state.fen);
+      board_states[i]= truncate_board_state;
+      // printf("board_state %d = %s\n", i, board_states[i].fen);
+      ereport(WARNING, errmsg_internal("board_state assigned properly"));
+      count+=1;
+    }
+    printf("truncation done for each FEN and board state created\n");
+    elog(WARNING, "gin_extractValue is working\n");
+    *nkeys = num_half_moves;
+    ereport(WARNING, errmsg_internal("nkeys= %d", *nkeys));
+    PG_FREE_IF_COPY(cg, 0);
+    PG_RETURN_POINTER(board_states);
+}
+
+PG_FUNCTION_INFO_V1(gin_extractQuery);
+Datum
+gin_extractQuery(PG_FUNCTION_ARGS)
+{
+    elog(WARNING, "this is gin_extractQuery start\n");
+    chessboard *cb_query = (chessboard *)PG_GETARG_POINTER(0);
+    int32 *nkeys = (int32 *) PG_GETARG_POINTER(1);
+    StrategyNumber strategy = PG_GETARG_UINT16(2);
+    bool **nullFlags = (bool **) PG_GETARG_POINTER(5);
+    int32 *searchMode = (int32 *) PG_GETARG_POINTER(6);
+    *searchMode = GIN_SEARCH_MODE_DEFAULT;
+    elog(WARNING, "this is gin_extractQuery\n");
+    *nkeys= 1;
+    Datum *keys = (Datum*)palloc(*nkeys * sizeof(Datum));
+    chessboard cb_res;
+    for(int i=0; i<SCL_FEN_MAX_LENGTH; i++)
+    {
+      cb_res.fen[i]='\0';
+    }
+    elog(WARNING, "this is gin_extractQuery middle\n");
+    for (int i = 0; i < *nkeys; i++)
+    {
+        strcpy(cb_res.fen, cb_query->fen);
+        keys[i] = ChessBoardPGetDatum(cb_res.fen);
+    }
+     elog(WARNING, "this is gin_extractQuery done\n");
+    *nullFlags = NULL;
+    PG_FREE_IF_COPY(cb_query, 0);
+    PG_RETURN_POINTER(keys);
+}
+
+PG_FUNCTION_INFO_V1(gin_consistent);
+Datum
+gin_consistent(PG_FUNCTION_ARGS)
+{  
+    elog(WARNING, "this is the gin_consistent strat\n");
+    bool result=true;
+    PG_RETURN_BOOL(result);
+    elog(WARNING, "this is the gin_consistent end\n");
+}
+
+int gin_compare_internal(chessboard cb1, chessboard cb2)
+{
+  elog(WARNING, "this is the gin_compare_internal\n");
+  int res= strcmp(truncate_fen(cb1)->fen, truncate_fen(cb2)->fen);
+  ereport(WARNING, errmsg_internal("cb_truncated = %d\n", res));
+  if(res > 0)
+  {
+    res=1;
+  }
+  else if(res < 0)
+  {
+    res=-1;
+  }
+  else
+  {
+    res=0;
+  }
+  return res;
+}
+
+PG_FUNCTION_INFO_V1(gin_compare);
+Datum
+gin_compare(PG_FUNCTION_ARGS)
+{
+    elog(WARNING, "this is the gin_compare start\n");
+    chessboard *cb1 = PG_GETARG_ChessBoard(0);
+    chessboard *cb2 = PG_GETARG_ChessBoard(1);
+   
+    elog(WARNING, "this is the gin_compare\n");
+    ereport(WARNING, errmsg_internal("cb_truncated = %s\n", cb1->fen));
+    ereport(WARNING, errmsg_internal("cb_truncated = %s\n", cb2->fen));
+    int32_t result = gin_compare_internal(*cb1, *cb2);
+    PG_FREE_IF_COPY(cb1, 0);
+    PG_FREE_IF_COPY(cb2, 1);
+    PG_RETURN_INT32(result);
 }

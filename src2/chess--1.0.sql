@@ -42,35 +42,6 @@ CREATE TYPE chessboard (
   output         = chessboard_out
 );
 
-
--- CREATE OR REPLACE FUNCTION chessgame(text)
---   RETURNS chessgame
---   AS 'MODULE_PATHNAME', 'chessgame_cast_from_text'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
--- CREATE OR REPLACE FUNCTION text(chessgame)
---   RETURNS text
---   AS 'MODULE_PATHNAME', 'chessgame_cast_to_text'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-  
--- CREATE OR REPLACE FUNCTION chessboard(text)
---   RETURNS chessboard
---   AS 'MODULE_PATHNAME', 'chessboard_cast_from_text'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
--- CREATE OR REPLACE FUNCTION text(chessboard)
---   RETURNS text
---   AS 'MODULE_PATHNAME', 'chessboard_cast_to_text'
---   LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-  
-
--- CREATE CAST (text as chessgame) WITH FUNCTION chessgame(text) AS IMPLICIT;
--- CREATE CAST (chessgame as text) WITH FUNCTION text(chessgame);
-
--- CREATE CAST (text as chessboard) WITH FUNCTION chessboard(text) AS IMPLICIT;
--- CREATE CAST (chessboard as text) WITH FUNCTION text(chessboard);
-
-
 /******************************************************************************
  * Constructors
  ******************************************************************************/
@@ -99,20 +70,14 @@ RETURNS chessgame
 AS 'MODULE_PATHNAME', 'getFirstMoves'
 LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
-CREATE FUNCTION hasBoard(chessgame, chessboard, int)
-RETURNS boolean
-AS 'MODULE_PATHNAME', 'hasBoard'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-
 /******************************************************************************
  * Indexes
  ******************************************************************************/
 
-/* In this part, we developed a second version of the BTree. This one 
- * makes use of the following operators: equality (=), inequality (!=),
- * greater than (>), less than (<), greater-equal than (>=) and 
- * less-equal than (<=) */
+/* In this part, we develop an implementation for the BTree. This implementation
+ * consists of defining the following operators: equality (=), inequality (!=), 
+ * contains (>) and is contained (<).
+ */
 
 CREATE FUNCTION chessgame_eq(chessgame, chessgame)
   RETURNS boolean
@@ -193,3 +158,54 @@ CREATE FUNCTION hasOpening(chessgame1 chessgame, chessgame2 chessgame)
 RETURNS boolean AS $$
 SELECT (chessgame1 >= chessgame2 AND chessgame1 < chessgame_add(chessgame2));
 $$ LANGUAGE sql STABLE;
+
+
+
+/* In this part, we develop an implementation for the GIN index. 
+ */
+
+ CREATE FUNCTION gin_extractValue(chessgame, internal)
+RETURNS internal
+AS 'MODULE_PATHNAME', 'gin_extractValue'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION gin_extractQuery(chessboard, internal, integer, internal, internal, internal, internal)
+RETURNS internal
+AS 'MODULE_PATHNAME', 'gin_extractQuery'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION gin_consistent()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'gin_consistent'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION gin_compare(chessboard, chessboard)
+RETURNS integer
+AS 'MODULE_PATHNAME', 'gin_compare'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION chessboard_at_op(chessgame, chessboard)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'chessboard_at_op'
+LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+
+CREATE OPERATOR @ (
+  LEFTARG = chessgame, RIGHTARG = chessboard,
+  PROCEDURE = chessboard_at_op,
+  COMMUTATOR = @
+);
+
+CREATE OPERATOR CLASS gin_ops
+    DEFAULT FOR TYPE chessgame USING gin AS
+        OPERATOR        1       @ (chessgame, chessboard) ,
+        FUNCTION        1       gin_compare (chessboard, chessboard),
+        FUNCTION        2       gin_extractValue(chessgame, internal),
+        FUNCTION        3       gin_extractQuery(chessboard, internal, integer, internal, internal, internal, internal),
+        FUNCTION        4       gin_consistent(),
+        STORAGE chessboard;
+
+CREATE FUNCTION hasBoard(cg chessgame, cb chessboard, moves integer)
+RETURNS boolean AS $$
+SELECT ((cg @ cb) AND (getFirstMoves(cg,moves) @ cb));
+$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
